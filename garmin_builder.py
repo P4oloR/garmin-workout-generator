@@ -30,6 +30,11 @@ STEP_TYPES = {
         "stepTypeKey": "recovery",
         "displayOrder": 4,
     },
+    StepRole.OTHER: {
+        "stepTypeId": 7,
+        "stepTypeKey": "other",
+        "displayOrder": 7,
+    },
 }
 
 
@@ -54,6 +59,19 @@ TIME_END_CONDITION = {
     "displayOrder": 2,
     "displayable": True,
 }
+
+
+LAP_BUTTON_END_CONDITION = {
+    "conditionTypeId": 1,
+    "conditionTypeKey": "lap.button",
+    "displayOrder": 1,
+    "displayable": True,
+}
+
+
+# VALIDATED_REFERENCE: exact value observed in the Garmin reference JSON.
+# Keep this literal until our generated LAP variant is imported successfully.
+LAP_BUTTON_REFERENCE_VALUE = 1000.0
 
 
 ITERATIONS_END_CONDITION = {
@@ -129,11 +147,19 @@ def build_end_condition(step: Step):
     if step.end_type == EndType.DISTANCE:
         return (
             DISTANCE_END_CONDITION.copy(),
+            float(step.value),
             DISTANCE_UNITS[step.preferred_unit].copy(),
         )
 
     if step.end_type == EndType.TIME:
-        return TIME_END_CONDITION.copy(), None
+        return TIME_END_CONDITION.copy(), float(step.value), None
+
+    if step.end_type == EndType.LAP_BUTTON:
+        return (
+            LAP_BUTTON_END_CONDITION.copy(),
+            LAP_BUTTON_REFERENCE_VALUE,
+            None,
+        )
 
     raise ValueError(f"Unsupported end type: {step.end_type}")
 
@@ -157,16 +183,25 @@ def build_target(step: Step):
             "zoneNumber": None,
         }
 
+    if step.target.kind == TargetKind.HEART_RATE_ZONE:
+        return {
+            "targetType": HEART_RATE_TARGET.copy(),
+            "targetValueOne": None,
+            "targetValueTwo": None,
+            "targetValueUnit": None,
+            "zoneNumber": step.target.zone_number,
+        }
+
     raise ValueError(f"Unsupported target kind: {step.target.kind}")
 
 
 def build_executable_step(
     step: Step,
-    step_id: int,
+    step_id,
     step_order: int,
     child_step_id=None,
 ):
-    end_condition, preferred_unit = build_end_condition(step)
+    end_condition, end_condition_value, preferred_unit = build_end_condition(step)
     target = build_target(step)
 
     return {
@@ -177,7 +212,7 @@ def build_executable_step(
         "childStepId": child_step_id,
         "description": None,
         "endCondition": end_condition,
-        "endConditionValue": float(step.value),
+        "endConditionValue": end_condition_value,
         "preferredEndConditionUnit": preferred_unit,
         "endConditionCompare": None,
         **target,
@@ -200,7 +235,7 @@ def build_executable_step(
 
 def build_repeat_group(
     repeat_block: RepeatBlock,
-    step_id: int,
+    step_id,
     step_order: int,
     child_step_id: int,
     child_step_ids,

@@ -8,11 +8,13 @@ class StepRole(str, Enum):
     INTERVAL = "interval"
     RECOVERY = "recovery"
     COOLDOWN = "cooldown"
+    OTHER = "other"
 
 
 class EndType(str, Enum):
     DISTANCE = "distance"
     TIME = "time"
+    LAP_BUTTON = "lap_button"
 
 
 class DistanceUnit(str, Enum):
@@ -23,6 +25,7 @@ class DistanceUnit(str, Enum):
 class TargetKind(str, Enum):
     NONE = "none"
     HEART_RATE_RANGE = "heart_rate_range"
+    HEART_RATE_ZONE = "heart_rate_zone"
 
 
 @dataclass(frozen=True)
@@ -30,10 +33,15 @@ class Target:
     kind: TargetKind
     min_bpm: Optional[int] = None
     max_bpm: Optional[int] = None
+    zone_number: Optional[int] = None
 
     def __post_init__(self):
         if self.kind == TargetKind.NONE:
-            if self.min_bpm is not None or self.max_bpm is not None:
+            if (
+                self.min_bpm is not None
+                or self.max_bpm is not None
+                or self.zone_number is not None
+            ):
                 raise ValueError(
                     "A target NONE cannot contain heart-rate values."
                 )
@@ -44,6 +52,11 @@ class Target:
                     "Heart-rate target requires min_bpm and max_bpm."
                 )
 
+            if self.zone_number is not None:
+                raise ValueError(
+                    "Heart-rate range cannot contain zone_number."
+                )
+
             if self.min_bpm <= 0 or self.max_bpm <= 0:
                 raise ValueError(
                     "Heart-rate values must be greater than zero."
@@ -52,6 +65,17 @@ class Target:
             if self.min_bpm >= self.max_bpm:
                 raise ValueError(
                     "min_bpm must be lower than max_bpm."
+                )
+
+        elif self.kind == TargetKind.HEART_RATE_ZONE:
+            if self.zone_number not in {1, 2, 3, 4, 5}:
+                raise ValueError(
+                    "Heart-rate zone must be between 1 and 5."
+                )
+
+            if self.min_bpm is not None or self.max_bpm is not None:
+                raise ValueError(
+                    "Heart-rate zone cannot contain min/max bpm."
                 )
 
     @classmethod
@@ -66,18 +90,28 @@ class Target:
             max_bpm=max_bpm,
         )
 
+    @classmethod
+    def heart_rate_zone(cls, zone_number: int):
+        return cls(
+            kind=TargetKind.HEART_RATE_ZONE,
+            zone_number=zone_number,
+        )
+
 
 @dataclass
 class Step:
     role: StepRole
     end_type: EndType
-    value: float
+    value: Optional[float] = None
     target: Target = field(default_factory=Target.none)
     preferred_unit: Optional[DistanceUnit] = None
 
     def __post_init__(self):
-        if self.value <= 0:
-            raise ValueError("Step value must be greater than zero.")
+        if self.end_type in {EndType.DISTANCE, EndType.TIME}:
+            if self.value is None or self.value <= 0:
+                raise ValueError(
+                    "Distance/time step value must be greater than zero."
+                )
 
         if self.end_type == EndType.DISTANCE:
             if self.preferred_unit is None:
@@ -87,6 +121,17 @@ class Step:
             if self.preferred_unit is not None:
                 raise ValueError(
                     "Time-based steps cannot have a distance preferred unit."
+                )
+
+        elif self.end_type == EndType.LAP_BUTTON:
+            if self.value is not None:
+                raise ValueError(
+                    "Lap-button steps do not accept a user-entered value."
+                )
+
+            if self.preferred_unit is not None:
+                raise ValueError(
+                    "Lap-button steps cannot have a distance preferred unit."
                 )
 
 

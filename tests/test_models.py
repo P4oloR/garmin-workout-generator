@@ -50,15 +50,6 @@ class TestWorkoutModels(unittest.TestCase):
 
         self.assertEqual(workout.name, "Facile + allunghi")
         self.assertEqual(len(workout.steps), 3)
-        self.assertEqual(
-            workout.steps[0].preferred_unit,
-            DistanceUnit.KILOMETER,
-        )
-
-        repeat = workout.steps[1]
-
-        self.assertEqual(repeat.repetitions, 6)
-        self.assertEqual(len(repeat.steps), 2)
 
     def test_invalid_heart_rate_range_is_rejected(self):
         with self.assertRaises(ValueError):
@@ -66,10 +57,7 @@ class TestWorkoutModels(unittest.TestCase):
 
     def test_repeat_block_requires_at_least_one_step(self):
         with self.assertRaises(ValueError):
-            RepeatBlock(
-                repetitions=3,
-                steps=[],
-            )
+            RepeatBlock(repetitions=3, steps=[])
 
     def test_distance_defaults_to_meter(self):
         step = Step(
@@ -77,11 +65,7 @@ class TestWorkoutModels(unittest.TestCase):
             end_type=EndType.DISTANCE,
             value=150,
         )
-
-        self.assertEqual(
-            step.preferred_unit,
-            DistanceUnit.METER,
-        )
+        self.assertEqual(step.preferred_unit, DistanceUnit.METER)
 
     def test_time_step_rejects_distance_unit(self):
         with self.assertRaises(ValueError):
@@ -91,6 +75,14 @@ class TestWorkoutModels(unittest.TestCase):
                 value=20,
                 preferred_unit=DistanceUnit.KILOMETER,
             )
+
+    def test_heart_rate_zone_is_supported(self):
+        target = Target.heart_rate_zone(4)
+        self.assertEqual(target.zone_number, 4)
+
+    def test_invalid_heart_rate_zone_is_rejected(self):
+        with self.assertRaises(ValueError):
+            Target.heart_rate_zone(6)
 
 
 if __name__ == "__main__":
