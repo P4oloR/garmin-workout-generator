@@ -31,6 +31,7 @@ htmlcov/
 # Ignore generated workout outputs
 examples/generated/
 
+# PyInstaller / Windows packaging
 build/
 dist/
 *.exe
