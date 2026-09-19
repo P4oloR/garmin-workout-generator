@@ -1,8 +1,10 @@
 import io
 import json
+import os
 import re
+import sys
 
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request, send_file, send_from_directory
 
 from garmin_builder import build_garmin_workout, count_required_step_ids
 from models import (
@@ -16,7 +18,28 @@ from models import (
 )
 
 
-app = Flask(__name__)
+def resource_path(relative_path):
+    if getattr(sys, "frozen", False):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.abspath(os.path.dirname(__file__))
+
+    return os.path.join(base_path, relative_path)
+
+
+app = Flask(
+    __name__,
+    template_folder=resource_path("templates"),
+    static_folder=None,
+)
+
+
+@app.get("/static/<path:filename>", endpoint="static")
+def static_files(filename):
+    return send_from_directory(
+        resource_path("static"),
+        filename,
+    )
 
 
 ROLE_MAP = {

@@ -30,3 +30,7 @@ htmlcov/
 
 # Ignore generated workout outputs
 examples/generated/
+
+build/
+dist/
+*.exe
