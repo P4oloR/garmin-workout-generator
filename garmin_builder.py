@@ -1,4 +1,4 @@
-from models import EndType, Step, StepRole, TargetKind
+from models import EndType, RepeatBlock, Step, StepRole, TargetKind
 
 
 STEP_TYPES = {
@@ -25,6 +25,13 @@ STEP_TYPES = {
 }
 
 
+REPEAT_STEP_TYPE = {
+    "stepTypeId": 6,
+    "stepTypeKey": "repeat",
+    "displayOrder": 6,
+}
+
+
 DISTANCE_END_CONDITION = {
     "conditionTypeId": 3,
     "conditionTypeKey": "distance",
@@ -38,6 +45,14 @@ TIME_END_CONDITION = {
     "conditionTypeKey": "time",
     "displayOrder": 2,
     "displayable": True,
+}
+
+
+ITERATIONS_END_CONDITION = {
+    "conditionTypeId": 7,
+    "conditionTypeKey": "iterations",
+    "displayOrder": 7,
+    "displayable": False,
 }
 
 
@@ -143,4 +158,55 @@ def build_executable_step(
         "providerExerciseSourceId": None,
         "weightValue": None,
         "weightUnit": None,
+    }
+
+
+def build_repeat_group(
+    repeat_block: RepeatBlock,
+    step_id: int,
+    step_order: int,
+    child_step_id: int,
+    child_step_ids,
+    child_step_orders,
+):
+    if len(child_step_ids) != len(repeat_block.steps):
+        raise ValueError(
+            "child_step_ids length must match repeat block steps."
+        )
+
+    if len(child_step_orders) != len(repeat_block.steps):
+        raise ValueError(
+            "child_step_orders length must match repeat block steps."
+        )
+
+    workout_steps = []
+
+    for step, child_id, child_order in zip(
+        repeat_block.steps,
+        child_step_ids,
+        child_step_orders,
+    ):
+        workout_steps.append(
+            build_executable_step(
+                step=step,
+                step_id=child_id,
+                step_order=child_order,
+                child_step_id=child_step_id,
+            )
+        )
+
+    return {
+        "type": "RepeatGroupDTO",
+        "stepId": step_id,
+        "stepOrder": step_order,
+        "stepType": REPEAT_STEP_TYPE.copy(),
+        "childStepId": child_step_id,
+        "numberOfIterations": repeat_block.repetitions,
+        "workoutSteps": workout_steps,
+        "endConditionValue": float(repeat_block.repetitions),
+        "preferredEndConditionUnit": None,
+        "endConditionCompare": None,
+        "endCondition": ITERATIONS_END_CONDITION.copy(),
+        "skipLastRestStep": False,
+        "smartRepeat": False,
     }
