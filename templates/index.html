@@ -12,90 +12,108 @@
         <div>
             <p class="eyebrow">GARMIN STANDALONE WORKOUT GENERATOR</p>
             <h1>Workout builder</h1>
-            <p class="subtitle">
-                Costruisci l'allenamento aggiungendo step singoli e blocchi di ripetute.
-            </p>
+            <p class="subtitle">Costruisci l'allenamento a blocchi e controllalo prima di generare il JSON Garmin.</p>
         </div>
-        <span class="status">MVP</span>
+        <div class="hero-status">
+            <span class="status">MVP</span>
+            <span id="validation-status" class="validation-status valid">✓ Workout valido</span>
+        </div>
     </header>
 
-    <section class="card">
+    <section class="card name-card">
         <label class="field">
             <span>Nome allenamento</span>
             <input id="workout-name" type="text" value="Allenamento Garmin">
+            <small class="field-error"></small>
         </label>
     </section>
 
     <section id="builder" class="builder"></section>
 
-    <div class="add-row">
+    <div class="add-row sticky-add-row">
         <button class="secondary" id="add-step" type="button">+ AGGIUNGI STEP</button>
         <button class="secondary" id="add-repeat" type="button">+ AGGIUNGI RIPETUTE</button>
     </div>
 
     <section class="card preview-card">
         <div class="section-heading">
-            <h2>Anteprima</h2>
-            <span class="preview-label">struttura interna</span>
+            <div>
+                <h2>Anteprima allenamento</h2>
+                <p class="section-note">Riepilogo leggibile prima della generazione.</p>
+            </div>
+            <span class="preview-label">anteprima</span>
         </div>
-        <pre id="preview"></pre>
+        <div id="preview" class="human-preview"></div>
     </section>
 
     <div id="error" class="error-box hidden"></div>
 
     <div class="actions">
-        <button id="generate" class="primary-button" type="button">
-            GENERA JSON GARMIN
-        </button>
+        <button id="generate" class="primary-button" type="button">GENERA JSON GARMIN</button>
     </div>
 </main>
 
 <template id="step-template">
     <article class="card block-card" data-kind="step">
         <div class="block-header">
-            <div>
+            <div class="block-title-area">
                 <span class="block-number"></span>
-                <h2>Step singolo</h2>
+                <span class="phase-badge">STEP</span>
+                <div>
+                    <h2>Step singolo</h2>
+                    <p class="block-summary"></p>
+                </div>
             </div>
             <div class="block-actions">
-                <button type="button" data-action="up">↑</button>
-                <button type="button" data-action="down">↓</button>
+                <button type="button" data-action="toggle">Comprimi</button>
+                <button type="button" data-action="up" title="Sposta su">↑</button>
+                <button type="button" data-action="down" title="Sposta giù">↓</button>
                 <button type="button" data-action="duplicate">Duplica</button>
-                <button type="button" data-action="delete">Elimina</button>
+                <button type="button" data-action="delete" class="danger-action">Elimina</button>
             </div>
         </div>
-        <div class="step-editor"></div>
+        <div class="block-body">
+            <div class="step-editor"></div>
+        </div>
     </article>
 </template>
 
 <template id="repeat-template">
-    <article class="card block-card" data-kind="repeat">
+    <article class="card block-card repeat-card" data-kind="repeat">
         <div class="block-header">
-            <div>
+            <div class="block-title-area">
                 <span class="block-number"></span>
-                <h2>Blocco ripetute</h2>
+                <span class="phase-badge repeat-badge">RIPETUTE</span>
+                <div>
+                    <h2>Blocco ripetute</h2>
+                    <p class="block-summary"></p>
+                </div>
             </div>
             <div class="block-actions">
-                <button type="button" data-action="up">↑</button>
-                <button type="button" data-action="down">↓</button>
+                <button type="button" data-action="toggle">Comprimi</button>
+                <button type="button" data-action="up" title="Sposta su">↑</button>
+                <button type="button" data-action="down" title="Sposta giù">↓</button>
                 <button type="button" data-action="duplicate">Duplica</button>
-                <button type="button" data-action="delete">Elimina</button>
+                <button type="button" data-action="delete" class="danger-action">Elimina</button>
             </div>
         </div>
 
-        <label class="field compact">
-            <span>Ripetizioni</span>
-            <input class="repetitions" type="number" min="1" step="1" value="4">
-        </label>
+        <div class="block-body">
+            <label class="field compact repetitions-field">
+                <span>Ripetizioni</span>
+                <input class="repetitions" type="number" min="1" step="1" value="4">
+                <small class="field-error"></small>
+            </label>
 
-        <div class="subcard">
-            <h3>Lavoro</h3>
-            <div class="work-editor"></div>
-        </div>
+            <div class="subcard work-subcard">
+                <h3>Lavoro</h3>
+                <div class="work-editor"></div>
+            </div>
 
-        <div class="subcard">
-            <h3>Recupero</h3>
-            <div class="recovery-editor"></div>
+            <div class="subcard recovery-subcard">
+                <h3>Recupero</h3>
+                <div class="recovery-editor"></div>
+            </div>
         </div>
     </article>
 </template>
@@ -104,6 +122,17 @@
 const builder = document.getElementById("builder");
 const preview = document.getElementById("preview");
 const errorBox = document.getElementById("error");
+const validationStatus = document.getElementById("validation-status");
+const generateButton = document.getElementById("generate");
+
+const roleNames = {
+    run: "Corsa",
+    warmup: "Riscaldamento",
+    interval: "Intervallo",
+    recovery: "Recupero",
+    cooldown: "Defaticamento",
+    other: "Altro",
+};
 
 function stepEditor(defaults = {}) {
     const wrap = document.createElement("div");
@@ -120,6 +149,7 @@ function stepEditor(defaults = {}) {
                 <option value="cooldown">Defaticamento</option>
                 <option value="other">Altro</option>
             </select>
+            <small class="field-error"></small>
         </label>
 
         <label class="field">
@@ -129,16 +159,19 @@ function stepEditor(defaults = {}) {
                 <option value="time">Tempo</option>
                 <option value="lap_button">Tasto LAP</option>
             </select>
+            <small class="field-error"></small>
         </label>
 
         <label class="field value-field">
             <span>Valore</span>
             <input class="value" type="number" min="0.01" step="0.01" value="1">
+            <small class="field-error"></small>
         </label>
 
         <label class="field unit-field">
             <span>Unità</span>
             <select class="unit"></select>
+            <small class="field-error"></small>
         </label>
 
         <label class="field">
@@ -147,18 +180,21 @@ function stepEditor(defaults = {}) {
                 <option value="none">Nessuno</option>
                 <option value="hr_range">FC personalizzata</option>
                 <option value="hr_zone">Zona FC</option>
-                <option value="pace">Passo (EXPERIMENTAL)</option>
+                <option value="pace">Passo</option>
             </select>
+            <small class="field-error"></small>
         </label>
 
         <label class="field hr-range-field hidden">
             <span>FC minima</span>
             <input class="hr-min" type="number" min="1" step="1" value="125">
+            <small class="field-error"></small>
         </label>
 
         <label class="field hr-range-field hidden">
             <span>FC massima</span>
             <input class="hr-max" type="number" min="1" step="1" value="138">
+            <small class="field-error"></small>
         </label>
 
         <label class="field hr-zone-field hidden">
@@ -170,30 +206,26 @@ function stepEditor(defaults = {}) {
                 <option value="4">Z4</option>
                 <option value="5">Z5</option>
             </select>
+            <small class="field-error"></small>
         </label>
 
         <label class="field pace-field hidden">
             <span>Limite veloce (min/km)</span>
-            <input class="pace-fast" type="text" value="4:10"
-                   inputmode="numeric" placeholder="4:10">
+            <input class="pace-fast" type="text" value="4:10" inputmode="numeric" placeholder="4:10">
+            <small class="field-error"></small>
         </label>
 
         <label class="field pace-field hidden">
             <span>Limite lento (min/km)</span>
-            <input class="pace-slow" type="text" value="4:20"
-                   inputmode="numeric" placeholder="4:20">
+            <input class="pace-slow" type="text" value="4:20" inputmode="numeric" placeholder="4:20">
+            <small class="field-error"></small>
         </label>
     `;
 
-    const role = wrap.querySelector(".role");
-    const endType = wrap.querySelector(".end-type");
-    const value = wrap.querySelector(".value");
-    const target = wrap.querySelector(".target");
-
-    role.value = defaults.role || "run";
-    endType.value = defaults.end_type || "distance";
-    value.value = defaults.value || 1;
-    target.value = defaults.target || "none";
+    wrap.querySelector(".role").value = defaults.role || "run";
+    wrap.querySelector(".end-type").value = defaults.end_type || "distance";
+    wrap.querySelector(".value").value = defaults.value ?? 1;
+    wrap.querySelector(".target").value = defaults.target || "none";
 
     updateEndTypeFields(wrap, defaults.unit);
     updateTargetFields(wrap);
@@ -201,19 +233,15 @@ function stepEditor(defaults = {}) {
     if (defaults.hr_min) wrap.querySelector(".hr-min").value = defaults.hr_min;
     if (defaults.hr_max) wrap.querySelector(".hr-max").value = defaults.hr_max;
     if (defaults.zone) wrap.querySelector(".zone").value = defaults.zone;
-    if (defaults.pace_fast) {
-        wrap.querySelector(".pace-fast").value = defaults.pace_fast;
-    }
-    if (defaults.pace_slow) {
-        wrap.querySelector(".pace-slow").value = defaults.pace_slow;
-    }
+    if (defaults.pace_fast) wrap.querySelector(".pace-fast").value = defaults.pace_fast;
+    if (defaults.pace_slow) wrap.querySelector(".pace-slow").value = defaults.pace_slow;
 
     wrap.querySelectorAll("input, select").forEach(el => {
-        el.addEventListener("input", updatePreview);
+        el.addEventListener("input", refreshUI);
         el.addEventListener("change", () => {
             if (el.classList.contains("end-type")) updateEndTypeFields(wrap);
             if (el.classList.contains("target")) updateTargetFields(wrap);
-            updatePreview();
+            refreshUI();
         });
     });
 
@@ -241,7 +269,6 @@ function updateEndTypeFields(editor, preferred) {
         : [["s", "sec"], ["min", "min"]];
 
     select.innerHTML = "";
-
     options.forEach(([value, label]) => {
         const option = document.createElement("option");
         option.value = value;
@@ -258,43 +285,27 @@ function updateEndTypeFields(editor, preferred) {
 
 function updateTargetFields(editor) {
     const target = editor.querySelector(".target").value;
-
-    editor.querySelectorAll(".hr-range-field").forEach(el => {
-        el.classList.toggle("hidden", target !== "hr_range");
-    });
-
-    editor.querySelectorAll(".hr-zone-field").forEach(el => {
-        el.classList.toggle("hidden", target !== "hr_zone");
-    });
-
-    editor.querySelectorAll(".pace-field").forEach(el => {
-        el.classList.toggle("hidden", target !== "pace");
-    });
+    editor.querySelectorAll(".hr-range-field").forEach(el => el.classList.toggle("hidden", target !== "hr_range"));
+    editor.querySelectorAll(".hr-zone-field").forEach(el => el.classList.toggle("hidden", target !== "hr_zone"));
+    editor.querySelectorAll(".pace-field").forEach(el => el.classList.toggle("hidden", target !== "pace"));
 }
 
 function addStep(defaults = {}) {
-    const node = document.getElementById("step-template")
-        .content.firstElementChild.cloneNode(true);
-
-    const editor = stepEditor(defaults);
-    node.querySelector(".step-editor").appendChild(editor);
-
+    const node = document.getElementById("step-template").content.firstElementChild.cloneNode(true);
+    node.querySelector(".step-editor").appendChild(stepEditor(defaults));
     attachBlockActions(node);
     builder.appendChild(node);
-    refreshNumbers();
-    updatePreview();
+    refreshUI();
 }
 
 function addRepeat(defaults = {}) {
-    const node = document.getElementById("repeat-template")
-        .content.firstElementChild.cloneNode(true);
-
+    const node = document.getElementById("repeat-template").content.firstElementChild.cloneNode(true);
     node.querySelector(".repetitions").value = defaults.repetitions || 4;
 
     const work = stepEditor({
         role: "interval",
         end_type: defaults.work?.end_type || "distance",
-        value: defaults.work?.value || 400,
+        value: defaults.work?.value ?? 400,
         unit: defaults.work?.unit || "m",
         target: defaults.work?.target || "none",
         hr_min: defaults.work?.hr_min,
@@ -307,7 +318,7 @@ function addRepeat(defaults = {}) {
     const recovery = stepEditor({
         role: "recovery",
         end_type: defaults.recovery?.end_type || "distance",
-        value: defaults.recovery?.value || 200,
+        value: defaults.recovery?.value ?? 200,
         unit: defaults.recovery?.unit || "m",
         target: defaults.recovery?.target || "none",
         hr_min: defaults.recovery?.hr_min,
@@ -319,23 +330,19 @@ function addRepeat(defaults = {}) {
 
     work.querySelector(".role").closest(".field").classList.add("hidden");
     recovery.querySelector(".role").closest(".field").classList.add("hidden");
-
     node.querySelector(".work-editor").appendChild(work);
     node.querySelector(".recovery-editor").appendChild(recovery);
-
-    node.querySelector(".repetitions").addEventListener("input", updatePreview);
+    node.querySelector(".repetitions").addEventListener("input", refreshUI);
 
     attachBlockActions(node);
     builder.appendChild(node);
-    refreshNumbers();
-    updatePreview();
+    refreshUI();
 }
 
 function attachBlockActions(node) {
     node.querySelectorAll("[data-action]").forEach(button => {
         button.addEventListener("click", () => {
             const action = button.dataset.action;
-
             if (action === "delete") {
                 node.remove();
             } else if (action === "up" && node.previousElementSibling) {
@@ -344,12 +351,17 @@ function attachBlockActions(node) {
                 builder.insertBefore(node.nextElementSibling, node);
             } else if (action === "duplicate") {
                 duplicateBlock(node);
+            } else if (action === "toggle") {
+                toggleBlock(node, button);
             }
-
-            refreshNumbers();
-            updatePreview();
+            refreshUI();
         });
     });
+}
+
+function toggleBlock(block, button) {
+    const collapsed = block.classList.toggle("collapsed");
+    button.textContent = collapsed ? "Espandi" : "Comprimi";
 }
 
 function serializeEditor(editor) {
@@ -370,12 +382,8 @@ function serializeEditor(editor) {
 
 function serializeBlock(block) {
     if (block.dataset.kind === "step") {
-        return {
-            type: "step",
-            ...serializeEditor(block.querySelector(".step-grid")),
-        };
+        return {type: "step", ...serializeEditor(block.querySelector(".step-grid"))};
     }
-
     return {
         type: "repeat",
         repetitions: Number(block.querySelector(".repetitions").value),
@@ -386,15 +394,191 @@ function serializeBlock(block) {
 
 function duplicateBlock(block) {
     const data = serializeBlock(block);
-
-    if (data.type === "step") {
-        addStep(data);
-    } else {
-        addRepeat(data);
-    }
-
+    if (data.type === "step") addStep(data); else addRepeat(data);
     const newBlock = builder.lastElementChild;
     builder.insertBefore(newBlock, block.nextElementSibling);
+}
+
+function paceToSeconds(value) {
+    if (!/^\d+:\d{2}$/.test(value)) return null;
+    const [minutes, seconds] = value.split(":").map(Number);
+    if (seconds > 59) return null;
+    const total = minutes * 60 + seconds;
+    return total > 0 ? total : null;
+}
+
+function setFieldError(input, message) {
+    const field = input.closest(".field");
+    if (!field) return;
+    input.classList.toggle("invalid", Boolean(message));
+    const error = field.querySelector(".field-error");
+    if (error) error.textContent = message || "";
+}
+
+function clearEditorErrors(editor) {
+    editor.querySelectorAll("input, select").forEach(el => setFieldError(el, ""));
+}
+
+function validateEditor(editor) {
+    clearEditorErrors(editor);
+    let valid = true;
+    const endType = editor.querySelector(".end-type").value;
+    const target = editor.querySelector(".target").value;
+
+    if (endType !== "lap_button") {
+        const valueInput = editor.querySelector(".value");
+        if (!(Number(valueInput.value) > 0)) {
+            setFieldError(valueInput, "Inserisci un valore maggiore di zero.");
+            valid = false;
+        }
+    }
+
+    if (target === "hr_range") {
+        const min = editor.querySelector(".hr-min");
+        const max = editor.querySelector(".hr-max");
+        if (!(Number(min.value) > 0)) {
+            setFieldError(min, "FC minima non valida.");
+            valid = false;
+        }
+        if (!(Number(max.value) > 0)) {
+            setFieldError(max, "FC massima non valida.");
+            valid = false;
+        }
+        if (Number(min.value) >= Number(max.value)) {
+            setFieldError(max, "Deve essere maggiore della FC minima.");
+            valid = false;
+        }
+    }
+
+    if (target === "pace") {
+        const fast = editor.querySelector(".pace-fast");
+        const slow = editor.querySelector(".pace-slow");
+        const fastSeconds = paceToSeconds(fast.value.trim());
+        const slowSeconds = paceToSeconds(slow.value.trim());
+        if (fastSeconds === null) {
+            setFieldError(fast, "Usa il formato mm:ss, es. 4:10.");
+            valid = false;
+        }
+        if (slowSeconds === null) {
+            setFieldError(slow, "Usa il formato mm:ss, es. 4:20.");
+            valid = false;
+        }
+        if (fastSeconds !== null && slowSeconds !== null && fastSeconds >= slowSeconds) {
+            setFieldError(slow, "Il limite lento deve essere più lento del limite veloce.");
+            valid = false;
+        }
+    }
+
+    return valid;
+}
+
+function validateAll() {
+    let valid = true;
+    const nameInput = document.getElementById("workout-name");
+    setFieldError(nameInput, "");
+
+    if (!nameInput.value.trim()) {
+        setFieldError(nameInput, "Inserisci il nome dell'allenamento.");
+        valid = false;
+    }
+
+    if (!builder.children.length) valid = false;
+
+    [...builder.children].forEach(block => {
+        block.classList.remove("has-error");
+        let blockValid = true;
+
+        if (block.dataset.kind === "step") {
+            blockValid = validateEditor(block.querySelector(".step-grid"));
+        } else {
+            const repetitions = block.querySelector(".repetitions");
+            setFieldError(repetitions, "");
+            if (!(Number(repetitions.value) >= 1 && Number.isInteger(Number(repetitions.value)))) {
+                setFieldError(repetitions, "Inserisci un numero intero maggiore di zero.");
+                blockValid = false;
+            }
+            blockValid = validateEditor(block.querySelector(".work-editor .step-grid")) && blockValid;
+            blockValid = validateEditor(block.querySelector(".recovery-editor .step-grid")) && blockValid;
+        }
+
+        block.classList.toggle("has-error", !blockValid);
+        valid = valid && blockValid;
+    });
+
+    validationStatus.textContent = valid ? "✓ Workout valido" : "⚠ Correggi i campi evidenziati";
+    validationStatus.classList.toggle("valid", valid);
+    validationStatus.classList.toggle("invalid-status", !valid);
+    generateButton.disabled = !valid;
+    return valid;
+}
+
+function targetText(data) {
+    if (data.target === "hr_range") return `${data.hr_min}-${data.hr_max} bpm`;
+    if (data.target === "hr_zone") return `Z${data.zone}`;
+    if (data.target === "pace") return `${data.pace_fast}-${data.pace_slow}/km`;
+    return "nessun target";
+}
+
+function durationText(data) {
+    return data.end_type === "lap_button" ? "Tasto LAP" : `${data.value} ${data.unit}`;
+}
+
+function stepSummary(data, includeRole = true) {
+    const role = includeRole ? `${roleNames[data.role]} · ` : "";
+    return `${role}${durationText(data)} · ${targetText(data)}`;
+}
+
+function updateBlockSummaries() {
+    [...builder.children].forEach(block => {
+        const data = serializeBlock(block);
+        const summary = block.querySelector(".block-summary");
+        const badge = block.querySelector(".phase-badge");
+
+        block.classList.remove("phase-warmup", "phase-run", "phase-interval", "phase-recovery", "phase-cooldown", "phase-other");
+
+        if (data.type === "step") {
+            summary.textContent = stepSummary(data, false);
+            badge.textContent = roleNames[data.role].toUpperCase();
+            block.classList.add(`phase-${data.role}`);
+        } else {
+            summary.textContent = `${data.repetitions} × ${durationText(data.work)} (${targetText(data.work)}) + ${durationText(data.recovery)} (${targetText(data.recovery)})`;
+            badge.textContent = "RIPETUTE";
+        }
+    });
+}
+
+function updatePreview() {
+    const blocks = [...builder.children];
+    preview.innerHTML = "";
+
+    if (!blocks.length) {
+        preview.innerHTML = '<p class="empty-preview">Aggiungi almeno uno step.</p>';
+        return;
+    }
+
+    blocks.forEach((block, index) => {
+        const data = serializeBlock(block);
+        const item = document.createElement("div");
+        item.className = "preview-item";
+        const number = document.createElement("span");
+        number.className = "preview-number";
+        number.textContent = index + 1;
+        const content = document.createElement("div");
+        content.className = "preview-content";
+
+        if (data.type === "step") {
+            content.innerHTML = `<strong>${roleNames[data.role]}</strong><span>${durationText(data)} · ${targetText(data)}</span>`;
+        } else {
+            content.innerHTML = `
+                <strong>${data.repetitions} ripetizioni</strong>
+                <span>Lavoro: ${durationText(data.work)} · ${targetText(data.work)}</span>
+                <span>Recupero: ${durationText(data.recovery)} · ${targetText(data.recovery)}</span>
+            `;
+        }
+
+        item.append(number, content);
+        preview.appendChild(item);
+    });
 }
 
 function refreshNumbers() {
@@ -403,66 +587,20 @@ function refreshNumbers() {
     });
 }
 
-function targetText(data) {
-    if (data.target === "hr_range") {
-        return ` · ${data.hr_min}-${data.hr_max} bpm`;
-    }
-
-    if (data.target === "hr_zone") {
-        return ` · Z${data.zone}`;
-    }
-
-    if (data.target === "pace") {
-        return ` · ${data.pace_fast}-${data.pace_slow} /km`;
-    }
-
-    return "";
-}
-
-function stepText(data) {
-    const roleNames = {
-        run: "Corsa",
-        warmup: "Riscaldamento",
-        interval: "Intervallo",
-        recovery: "Recupero",
-        cooldown: "Defaticamento",
-        other: "Altro",
-    };
-
-    const duration = data.end_type === "lap_button"
-        ? "Tasto LAP"
-        : `${data.value} ${data.unit}`;
-
-    return `${roleNames[data.role]}: ${duration}${targetText(data)}`;
-}
-
-function updatePreview() {
-    const lines = [];
-    const name = document.getElementById("workout-name").value.trim();
-
-    if (name) {
-        lines.push(name, "");
-    }
-
-    [...builder.children].forEach(block => {
-        const data = serializeBlock(block);
-
-        if (data.type === "step") {
-            lines.push(stepText(data));
-        } else {
-            lines.push(`${data.repetitions} ×`);
-            lines.push(`  ${stepText({...data.work, role: "interval"})}`);
-            lines.push(`  ${stepText({...data.recovery, role: "recovery"})}`);
-        }
-
-        lines.push("");
-    });
-
-    preview.textContent = lines.join("\n").trim();
+function refreshUI() {
+    refreshNumbers();
+    updateBlockSummaries();
+    updatePreview();
+    validateAll();
 }
 
 async function generateJson() {
     errorBox.classList.add("hidden");
+    if (!validateAll()) {
+        errorBox.textContent = "Correggi i campi evidenziati prima di generare il JSON.";
+        errorBox.classList.remove("hidden");
+        return;
+    }
 
     const payload = {
         name: document.getElementById("workout-name").value,
@@ -484,9 +622,8 @@ async function generateJson() {
 
     const blob = await response.blob();
     const disposition = response.headers.get("Content-Disposition") || "";
-    const match = disposition.match(/filename="?([^"]+)"?/);
+    const match = disposition.match(/filename="?([^";]+)"?/);
     const filename = match ? match[1] : "garmin_workout.json";
-
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -500,29 +637,16 @@ async function generateJson() {
 document.getElementById("add-step").addEventListener("click", () => addStep());
 document.getElementById("add-repeat").addEventListener("click", () => addRepeat());
 document.getElementById("generate").addEventListener("click", generateJson);
-document.getElementById("workout-name").addEventListener("input", updatePreview);
+document.getElementById("workout-name").addEventListener("input", refreshUI);
 
-addStep({
-    role: "warmup",
-    end_type: "distance",
-    value: 2.5,
-    unit: "km",
-    target: "none",
-});
-
+addStep({role: "warmup", end_type: "distance", value: 2.5, unit: "km", target: "none"});
 addRepeat({
     repetitions: 6,
     work: {end_type: "time", value: 20, unit: "s", target: "none"},
     recovery: {end_type: "distance", value: 150, unit: "m", target: "none"},
 });
-
-addStep({
-    role: "cooldown",
-    end_type: "distance",
-    value: 1,
-    unit: "km",
-    target: "none",
-});
+addStep({role: "cooldown", end_type: "distance", value: 1, unit: "km", target: "none"});
+refreshUI();
 </script>
 </body>
 </html>
