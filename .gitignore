@@ -27,3 +27,6 @@ htmlcov/
 # Local secrets / config
 .env
 .env.*
+
+# Ignore generated workout outputs
+examples/generated/
