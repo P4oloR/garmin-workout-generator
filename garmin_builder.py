@@ -1,4 +1,12 @@
-from models import EndType, RepeatBlock, Step, StepRole, TargetKind, Workout
+from models import (
+    DistanceUnit,
+    EndType,
+    RepeatBlock,
+    Step,
+    StepRole,
+    TargetKind,
+    Workout,
+)
 
 
 STEP_TYPES = {
@@ -56,10 +64,17 @@ ITERATIONS_END_CONDITION = {
 }
 
 
-METER_UNIT = {
-    "unitId": 1,
-    "unitKey": "meter",
-    "factor": 100.0,
+DISTANCE_UNITS = {
+    DistanceUnit.METER: {
+        "unitId": 1,
+        "unitKey": "meter",
+        "factor": 100.0,
+    },
+    DistanceUnit.KILOMETER: {
+        "unitId": 2,
+        "unitKey": "kilometer",
+        "factor": 100000.0,
+    },
 }
 
 
@@ -112,7 +127,10 @@ EMPTY_AUTHOR = {
 
 def build_end_condition(step: Step):
     if step.end_type == EndType.DISTANCE:
-        return DISTANCE_END_CONDITION.copy(), METER_UNIT.copy()
+        return (
+            DISTANCE_END_CONDITION.copy(),
+            DISTANCE_UNITS[step.preferred_unit].copy(),
+        )
 
     if step.end_type == EndType.TIME:
         return TIME_END_CONDITION.copy(), None
@@ -306,17 +324,6 @@ def build_garmin_workout(
     step_ids,
     description=None,
 ):
-    """
-    Build the Garmin workout document using only root/segment fields observed
-    in validated reference exports.
-
-    IMPORTANT:
-    This full-document generation is still EXPERIMENTAL until a JSON produced
-    by this function is successfully imported into Garmin Connect.
-
-    Step IDs are intentionally supplied by the caller because automatic Garmin
-    step-ID generation has not yet been validated.
-    """
     workout_steps = build_workout_steps(workout, step_ids)
 
     return {

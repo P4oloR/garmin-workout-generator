@@ -15,6 +15,11 @@ class EndType(str, Enum):
     TIME = "time"
 
 
+class DistanceUnit(str, Enum):
+    METER = "m"
+    KILOMETER = "km"
+
+
 class TargetKind(str, Enum):
     NONE = "none"
     HEART_RATE_RANGE = "heart_rate_range"
@@ -68,10 +73,21 @@ class Step:
     end_type: EndType
     value: float
     target: Target = field(default_factory=Target.none)
+    preferred_unit: Optional[DistanceUnit] = None
 
     def __post_init__(self):
         if self.value <= 0:
             raise ValueError("Step value must be greater than zero.")
+
+        if self.end_type == EndType.DISTANCE:
+            if self.preferred_unit is None:
+                self.preferred_unit = DistanceUnit.METER
+
+        elif self.end_type == EndType.TIME:
+            if self.preferred_unit is not None:
+                raise ValueError(
+                    "Time-based steps cannot have a distance preferred unit."
+                )
 
 
 @dataclass

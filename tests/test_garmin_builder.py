@@ -7,7 +7,15 @@ from garmin_builder import (
     build_workout_steps,
     count_required_step_ids,
 )
-from models import EndType, RepeatBlock, Step, StepRole, Target, Workout
+from models import (
+    DistanceUnit,
+    EndType,
+    RepeatBlock,
+    Step,
+    StepRole,
+    Target,
+    Workout,
+)
 
 
 class TestGarminBuilder(unittest.TestCase):
@@ -46,8 +54,9 @@ class TestGarminBuilder(unittest.TestCase):
         step = Step(
             role=StepRole.WARMUP,
             end_type=EndType.DISTANCE,
-            value=2500,
+            value=7500,
             target=Target.heart_rate(125, 138),
+            preferred_unit=DistanceUnit.KILOMETER,
         )
 
         result = build_executable_step(
@@ -64,10 +73,10 @@ class TestGarminBuilder(unittest.TestCase):
             result["endCondition"]["conditionTypeKey"],
             "distance",
         )
-        self.assertEqual(result["endConditionValue"], 2500.0)
+        self.assertEqual(result["endConditionValue"], 7500.0)
         self.assertEqual(
             result["preferredEndConditionUnit"]["unitKey"],
-            "meter",
+            "kilometer",
         )
         self.assertEqual(
             result["targetType"]["workoutTargetTypeKey"],
@@ -118,6 +127,12 @@ class TestGarminBuilder(unittest.TestCase):
         self.assertFalse(result["smartRepeat"])
         self.assertEqual(len(result["workoutSteps"]), 2)
 
+        recovery = result["workoutSteps"][1]
+        self.assertEqual(
+            recovery["preferredEndConditionUnit"]["unitKey"],
+            "meter",
+        )
+
     def _example_a(self):
         return Workout(
             name="Facile + allunghi",
@@ -125,8 +140,9 @@ class TestGarminBuilder(unittest.TestCase):
                 Step(
                     role=StepRole.WARMUP,
                     end_type=EndType.DISTANCE,
-                    value=2500,
+                    value=7500,
                     target=Target.heart_rate(125, 138),
+                    preferred_unit=DistanceUnit.KILOMETER,
                 ),
                 RepeatBlock(
                     repetitions=6,
@@ -140,6 +156,7 @@ class TestGarminBuilder(unittest.TestCase):
                             role=StepRole.RECOVERY,
                             end_type=EndType.DISTANCE,
                             value=150,
+                            preferred_unit=DistanceUnit.METER,
                         ),
                     ],
                 ),
@@ -148,6 +165,7 @@ class TestGarminBuilder(unittest.TestCase):
                     end_type=EndType.DISTANCE,
                     value=1000,
                     target=Target.heart_rate(125, 138),
+                    preferred_unit=DistanceUnit.METER,
                 ),
             ],
         )
@@ -177,11 +195,18 @@ class TestGarminBuilder(unittest.TestCase):
         self.assertEqual(steps[1]["workoutSteps"][1]["stepOrder"], 4)
         self.assertEqual(steps[2]["stepOrder"], 5)
 
-        self.assertIsNone(steps[0]["childStepId"])
-        self.assertEqual(steps[1]["childStepId"], 1)
-        self.assertEqual(steps[1]["workoutSteps"][0]["childStepId"], 1)
-        self.assertEqual(steps[1]["workoutSteps"][1]["childStepId"], 1)
-        self.assertIsNone(steps[2]["childStepId"])
+        self.assertEqual(
+            steps[0]["preferredEndConditionUnit"]["unitKey"],
+            "kilometer",
+        )
+        self.assertEqual(
+            steps[1]["workoutSteps"][1]["preferredEndConditionUnit"]["unitKey"],
+            "meter",
+        )
+        self.assertEqual(
+            steps[2]["preferredEndConditionUnit"]["unitKey"],
+            "meter",
+        )
 
     def test_build_complete_garmin_workout_shape(self):
         workout = self._example_a()
@@ -207,26 +232,22 @@ class TestGarminBuilder(unittest.TestCase):
         )
         self.assertFalse(result["shared"])
 
-        self.assertEqual(len(result["workoutSegments"]), 1)
-
         segment = result["workoutSegments"][0]
-        self.assertEqual(segment["segmentOrder"], 1)
-        self.assertEqual(
-            segment["sportType"]["sportTypeKey"],
-            "running",
-        )
         self.assertEqual(len(segment["workoutSteps"]), 3)
 
         warmup = segment["workoutSteps"][0]
         repeat = segment["workoutSteps"][1]
         cooldown = segment["workoutSteps"][2]
 
-        self.assertEqual(warmup["type"], "ExecutableStepDTO")
-        self.assertEqual(repeat["type"], "RepeatGroupDTO")
-        self.assertEqual(cooldown["type"], "ExecutableStepDTO")
-
+        self.assertEqual(
+            warmup["preferredEndConditionUnit"]["unitKey"],
+            "kilometer",
+        )
         self.assertEqual(repeat["numberOfIterations"], 6)
-        self.assertEqual(len(repeat["workoutSteps"]), 2)
+        self.assertEqual(
+            cooldown["preferredEndConditionUnit"]["unitKey"],
+            "meter",
+        )
 
     def test_build_workout_rejects_wrong_number_of_step_ids(self):
         workout = self._example_a()

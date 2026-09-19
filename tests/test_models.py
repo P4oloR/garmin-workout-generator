@@ -1,6 +1,7 @@
 import unittest
 
 from models import (
+    DistanceUnit,
     EndType,
     RepeatBlock,
     Step,
@@ -21,6 +22,7 @@ class TestWorkoutModels(unittest.TestCase):
                     end_type=EndType.DISTANCE,
                     value=2500,
                     target=Target.heart_rate(125, 138),
+                    preferred_unit=DistanceUnit.KILOMETER,
                 ),
                 RepeatBlock(
                     repetitions=6,
@@ -48,6 +50,10 @@ class TestWorkoutModels(unittest.TestCase):
 
         self.assertEqual(workout.name, "Facile + allunghi")
         self.assertEqual(len(workout.steps), 3)
+        self.assertEqual(
+            workout.steps[0].preferred_unit,
+            DistanceUnit.KILOMETER,
+        )
 
         repeat = workout.steps[1]
 
@@ -63,6 +69,27 @@ class TestWorkoutModels(unittest.TestCase):
             RepeatBlock(
                 repetitions=3,
                 steps=[],
+            )
+
+    def test_distance_defaults_to_meter(self):
+        step = Step(
+            role=StepRole.RECOVERY,
+            end_type=EndType.DISTANCE,
+            value=150,
+        )
+
+        self.assertEqual(
+            step.preferred_unit,
+            DistanceUnit.METER,
+        )
+
+    def test_time_step_rejects_distance_unit(self):
+        with self.assertRaises(ValueError):
+            Step(
+                role=StepRole.INTERVAL,
+                end_type=EndType.TIME,
+                value=20,
+                preferred_unit=DistanceUnit.KILOMETER,
             )
 
 
