@@ -1,4 +1,4 @@
-from models import EndType, RepeatBlock, Step, StepRole, TargetKind
+from models import EndType, RepeatBlock, Step, StepRole, TargetKind, Workout
 
 
 STEP_TYPES = {
@@ -88,6 +88,25 @@ EMPTY_EQUIPMENT_TYPE = {
     "equipmentTypeId": 0,
     "equipmentTypeKey": None,
     "displayOrder": 0,
+}
+
+
+RUNNING_SPORT_TYPE = {
+    "sportTypeId": 1,
+    "sportTypeKey": "running",
+    "displayOrder": 1,
+}
+
+
+EMPTY_AUTHOR = {
+    "userProfilePk": None,
+    "displayName": None,
+    "fullName": None,
+    "profileImgNameLarge": None,
+    "profileImgNameMedium": None,
+    "profileImgNameSmall": None,
+    "userPro": False,
+    "vivokidUser": False,
 }
 
 
@@ -209,4 +228,143 @@ def build_repeat_group(
         "endCondition": ITERATIONS_END_CONDITION.copy(),
         "skipLastRestStep": False,
         "smartRepeat": False,
+    }
+
+
+def count_required_step_ids(workout: Workout) -> int:
+    total = 0
+
+    for item in workout.steps:
+        total += 1
+
+        if isinstance(item, RepeatBlock):
+            total += len(item.steps)
+
+    return total
+
+
+def build_workout_steps(workout: Workout, step_ids):
+    expected = count_required_step_ids(workout)
+
+    if len(step_ids) != expected:
+        raise ValueError(
+            f"Expected {expected} step IDs, received {len(step_ids)}."
+        )
+
+    ids = iter(step_ids)
+    result = []
+    step_order = 1
+    repeat_group_number = 0
+
+    for item in workout.steps:
+        if isinstance(item, Step):
+            result.append(
+                build_executable_step(
+                    step=item,
+                    step_id=next(ids),
+                    step_order=step_order,
+                    child_step_id=None,
+                )
+            )
+            step_order += 1
+            continue
+
+        if isinstance(item, RepeatBlock):
+            repeat_group_number += 1
+
+            group_step_id = next(ids)
+            group_step_order = step_order
+            step_order += 1
+
+            child_step_ids = []
+            child_step_orders = []
+
+            for _ in item.steps:
+                child_step_ids.append(next(ids))
+                child_step_orders.append(step_order)
+                step_order += 1
+
+            result.append(
+                build_repeat_group(
+                    repeat_block=item,
+                    step_id=group_step_id,
+                    step_order=group_step_order,
+                    child_step_id=repeat_group_number,
+                    child_step_ids=child_step_ids,
+                    child_step_orders=child_step_orders,
+                )
+            )
+            continue
+
+        raise TypeError(f"Unsupported workout item: {type(item)!r}")
+
+    return result
+
+
+def build_garmin_workout(
+    workout: Workout,
+    step_ids,
+    description=None,
+):
+    """
+    Build the Garmin workout document using only root/segment fields observed
+    in validated reference exports.
+
+    IMPORTANT:
+    This full-document generation is still EXPERIMENTAL until a JSON produced
+    by this function is successfully imported into Garmin Connect.
+
+    Step IDs are intentionally supplied by the caller because automatic Garmin
+    step-ID generation has not yet been validated.
+    """
+    workout_steps = build_workout_steps(workout, step_ids)
+
+    return {
+        "workoutId": None,
+        "ownerId": None,
+        "workoutName": workout.name,
+        "description": description,
+        "updatedDate": None,
+        "createdDate": None,
+        "sportType": RUNNING_SPORT_TYPE.copy(),
+        "subSportType": None,
+        "trainingPlanId": None,
+        "author": EMPTY_AUTHOR.copy(),
+        "sharedWithUsers": None,
+        "estimatedDurationInSecs": None,
+        "estimatedDistanceInMeters": None,
+        "workoutSegments": [
+            {
+                "segmentOrder": 1,
+                "sportType": RUNNING_SPORT_TYPE.copy(),
+                "poolLengthUnit": None,
+                "poolLength": None,
+                "avgTrainingSpeed": None,
+                "estimatedDurationInSecs": None,
+                "estimatedDistanceInMeters": None,
+                "estimatedDistanceUnit": None,
+                "estimateType": None,
+                "description": None,
+                "workoutSteps": workout_steps,
+            }
+        ],
+        "poolLength": None,
+        "poolLengthUnit": None,
+        "locale": None,
+        "workoutProvider": None,
+        "workoutSourceId": None,
+        "uploadTimestamp": None,
+        "atpPlanId": None,
+        "consumer": None,
+        "consumerName": None,
+        "consumerImageURL": None,
+        "consumerWebsiteURL": None,
+        "workoutNameI18nKey": None,
+        "descriptionI18nKey": None,
+        "avgTrainingSpeed": None,
+        "estimateType": None,
+        "estimatedDistanceUnit": None,
+        "workoutThumbnailUrl": None,
+        "isSessionTransitionEnabled": None,
+        "shared": False,
     }
