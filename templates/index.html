@@ -147,7 +147,7 @@ function stepEditor(defaults = {}) {
                 <option value="none">Nessuno</option>
                 <option value="hr_range">FC personalizzata</option>
                 <option value="hr_zone">Zona FC</option>
-                <option value="pace" disabled>Passo (EXPERIMENTAL)</option>
+                <option value="pace">Passo (EXPERIMENTAL)</option>
             </select>
         </label>
 
@@ -171,6 +171,18 @@ function stepEditor(defaults = {}) {
                 <option value="5">Z5</option>
             </select>
         </label>
+
+        <label class="field pace-field hidden">
+            <span>Limite veloce (min/km)</span>
+            <input class="pace-fast" type="text" value="4:10"
+                   inputmode="numeric" placeholder="4:10">
+        </label>
+
+        <label class="field pace-field hidden">
+            <span>Limite lento (min/km)</span>
+            <input class="pace-slow" type="text" value="4:20"
+                   inputmode="numeric" placeholder="4:20">
+        </label>
     `;
 
     const role = wrap.querySelector(".role");
@@ -189,6 +201,12 @@ function stepEditor(defaults = {}) {
     if (defaults.hr_min) wrap.querySelector(".hr-min").value = defaults.hr_min;
     if (defaults.hr_max) wrap.querySelector(".hr-max").value = defaults.hr_max;
     if (defaults.zone) wrap.querySelector(".zone").value = defaults.zone;
+    if (defaults.pace_fast) {
+        wrap.querySelector(".pace-fast").value = defaults.pace_fast;
+    }
+    if (defaults.pace_slow) {
+        wrap.querySelector(".pace-slow").value = defaults.pace_slow;
+    }
 
     wrap.querySelectorAll("input, select").forEach(el => {
         el.addEventListener("input", updatePreview);
@@ -248,6 +266,10 @@ function updateTargetFields(editor) {
     editor.querySelectorAll(".hr-zone-field").forEach(el => {
         el.classList.toggle("hidden", target !== "hr_zone");
     });
+
+    editor.querySelectorAll(".pace-field").forEach(el => {
+        el.classList.toggle("hidden", target !== "pace");
+    });
 }
 
 function addStep(defaults = {}) {
@@ -278,6 +300,8 @@ function addRepeat(defaults = {}) {
         hr_min: defaults.work?.hr_min,
         hr_max: defaults.work?.hr_max,
         zone: defaults.work?.zone,
+        pace_fast: defaults.work?.pace_fast,
+        pace_slow: defaults.work?.pace_slow,
     });
 
     const recovery = stepEditor({
@@ -289,6 +313,8 @@ function addRepeat(defaults = {}) {
         hr_min: defaults.recovery?.hr_min,
         hr_max: defaults.recovery?.hr_max,
         zone: defaults.recovery?.zone,
+        pace_fast: defaults.recovery?.pace_fast,
+        pace_slow: defaults.recovery?.pace_slow,
     });
 
     work.querySelector(".role").closest(".field").classList.add("hidden");
@@ -337,6 +363,8 @@ function serializeEditor(editor) {
         hr_min: Number(editor.querySelector(".hr-min").value),
         hr_max: Number(editor.querySelector(".hr-max").value),
         zone: Number(editor.querySelector(".zone").value),
+        pace_fast: editor.querySelector(".pace-fast").value.trim(),
+        pace_slow: editor.querySelector(".pace-slow").value.trim(),
     };
 }
 
@@ -382,6 +410,10 @@ function targetText(data) {
 
     if (data.target === "hr_zone") {
         return ` · Z${data.zone}`;
+    }
+
+    if (data.target === "pace") {
+        return ` · ${data.pace_fast}-${data.pace_slow} /km`;
     }
 
     return "";

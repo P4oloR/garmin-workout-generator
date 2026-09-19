@@ -53,6 +53,33 @@ def positive_int(value, label):
     return number
 
 
+def parse_pace(value, label):
+    if not isinstance(value, str):
+        raise ValueError(f"{label}: usa il formato mm:ss.")
+
+    text = value.strip()
+    parts = text.split(":")
+
+    if len(parts) != 2:
+        raise ValueError(f"{label}: usa il formato mm:ss.")
+
+    try:
+        minutes = int(parts[0])
+        seconds = int(parts[1])
+    except ValueError as exc:
+        raise ValueError(f"{label}: usa il formato mm:ss.") from exc
+
+    if minutes < 0 or seconds < 0 or seconds > 59:
+        raise ValueError(f"{label}: valore non valido.")
+
+    total_seconds = minutes * 60 + seconds
+
+    if total_seconds <= 0:
+        raise ValueError(f"{label}: deve essere maggiore di zero.")
+
+    return float(total_seconds)
+
+
 def parse_target(data):
     kind = data.get("target", "none")
 
@@ -71,8 +98,15 @@ def parse_target(data):
         )
 
     if kind == "pace":
-        raise ValueError(
-            "Il target passo è ancora EXPERIMENTAL e non è abilitato."
+        return Target.pace_range(
+            parse_pace(
+                data.get("pace_fast"),
+                "Passo veloce",
+            ),
+            parse_pace(
+                data.get("pace_slow"),
+                "Passo lento",
+            ),
         )
 
     raise ValueError("Target non supportato.")
