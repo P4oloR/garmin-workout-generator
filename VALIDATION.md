@@ -2,7 +2,7 @@
 
 Questo documento registra esclusivamente le strutture e le combinazioni effettivamente osservate o importate con successo in Garmin Connect.
 
-Data ultimo aggiornamento: 2026-09-19
+Data ultimo aggiornamento: 2026-09-22
 
 ## Stati
 
@@ -240,6 +240,38 @@ Sono stati importati con successo workout generati dalla GUI contenenti:
 - Tasto LAP con Zona FC;
 - target Passo generato dinamicamente da valori in min/km.
 
+### Pipeline Intervals.icu
+
+Validato end-to-end il flusso reale:
+
+```text
+GUI Flask
+-> modello interno
+-> intervals_builder.py
+-> API Intervals.icu
+-> calendario Intervals.icu
+-> Garmin Connect
+-> orologio Garmin
+```
+
+Golden test validato il 2026-09-22 tramite workout creato dalla GUI:
+
+```text
+Riscaldamento: 3 km, nessun target
+2x:
+  Lavoro: 1 km, Pace 4:28-4:32/km
+  Recupero: 1 km, Z1 HR
+Defaticamento: 2 km, nessun target
+```
+
+Il workout è stato creato correttamente nel calendario Intervals.icu e successivamente verificato sul dispositivo Garmin reale.
+
+Nel test, Intervals.icu ha risolto `Z1 HR` nel range BPM configurato per l'atleta. Il valore BPM concreto dipende dalla configurazione delle zone HR dell'atleta in Intervals.icu e non va considerato universale.
+
+Per il target passo è stato validato l'uso di un range esplicito, che nel test è stato mantenuto come `4:28-4:32/km` anche sull'orologio.
+
+Questa validazione riguarda la combinazione effettivamente testata. Non estende automaticamente lo stato `VALIDATED` a LAP via Intervals.icu o ad altre combinazioni non ancora provate.
+
 ## VALIDATED_REFERENCE
 
 Le strutture presenti nei riferimenti Garmin ma non ancora promosse a `VALIDATED` per combinazioni specifiche restano qui finché non vengono testate end-to-end.
@@ -269,4 +301,4 @@ Una nuova struttura non diventa `VALIDATED` perché:
 - è osservata in un riferimento;
 - passa i test unitari.
 
-Diventa `VALIDATED` solo dopo che un JSON generato dal progetto viene importato con successo in Garmin Connect e il comportamento risultante è coerente con l'intento dell'allenamento.
+Diventa `VALIDATED` solo dopo una verifica end-to-end sul percorso interessato. Per il percorso JSON diretto significa import riuscito in Garmin Connect; per il percorso Intervals.icu significa creazione/sincronizzazione riuscita fino al dispositivo Garmin e comportamento coerente con l'intento dell'allenamento.
