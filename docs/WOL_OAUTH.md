@@ -4,6 +4,8 @@
 
 Definire il flusso OAuth minimo necessario a WOL per inserire workout nel calendario Intervals.icu dell'atleta.
 
+Questo OAuth riguarda **solo l'atleta destinatario**. L'autenticazione del publisher del PoC è separata e usa una publisher key WOL; non usa OAuth Intervals.icu.
+
 ## Principio di sicurezza
 
 WOL non deve chiedere o memorizzare:
@@ -194,6 +196,18 @@ Per questo motivo:
 - se necessario, chiedere nuovamente OAuth all'utente.
 
 Il comportamento reale va verificato durante il PoC OAuth.
+
+## Separazione publisher / atleta
+
+```text
+PUBLISHER
+WOG -> WOL publisher key -> pubblicazione
+
+ATLETA
+link pubblico -> OAuth Intervals.icu -> delivery
+```
+
+La publisher key non deve essere riutilizzata come token atleta e i bearer token Intervals.icu non devono essere usati per autorizzare il publishing WOG -> WOL.
 
 ## Sessione atleta
 
