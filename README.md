@@ -377,6 +377,14 @@ per il dettaglio delle strutture validate.
 
 ---
 
+# Documentazione WorkOutLink
+
+- [Architettura WOL](docs/WOL_ARCHITECTURE.md)
+- [Contratto piano pubblico WOL](docs/WOL_PUBLIC_PLAN.md)
+- [OAuth Intervals.icu per WOL](docs/WOL_OAUTH.md)
+
+---
+
 # Architettura attuale
 
 ```text
