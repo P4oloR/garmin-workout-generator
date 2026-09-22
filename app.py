@@ -5,8 +5,10 @@ import re
 import sys
 
 from flask import Flask, render_template, request, send_file, send_from_directory
+import requests
 
 from garmin_builder import build_garmin_workout, count_required_step_ids
+from intervals_builder import build_intervals_workout
 from models import (
     DistanceUnit,
     EndType,
@@ -246,6 +248,47 @@ def build_workout_from_payload(payload):
     return Workout(name=name, steps=items)
 
 
+INTERVALS_BASE_URL = "https://intervals.icu/api/v1"
+
+
+def create_or_update_intervals_workout(api_key, workout, date_str):
+    description = build_intervals_workout(workout)
+    payload = [{
+        "category": "WORKOUT",
+        "start_date_local": f"{date_str}T00:00:00",
+        "type": "Run",
+        "name": workout.name,
+        "description": description,
+        "external_id": f"garmin-workout-generator-{date_str}-{safe_filename(workout.name)}",
+    }]
+
+    response = requests.post(
+        f"{INTERVALS_BASE_URL}/athlete/0/events/bulk",
+        params={"upsert": "true"},
+        auth=("API_KEY", api_key),
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "GarminWorkoutGenerator/0.1",
+        },
+        json=payload,
+        timeout=30,
+    )
+
+    if not response.ok:
+        raise RuntimeError(
+            f"Intervals.icu ha risposto HTTP {response.status_code}: {response.text}"
+        )
+
+    data = response.json()
+    if not isinstance(data, list):
+        raise RuntimeError(
+            "Risposta inattesa da Intervals.icu: attesa una lista di eventi."
+        )
+
+    return data
+
+
 def safe_filename(name):
     cleaned = re.sub(r"[^A-Za-z0-9._-]+", "_", name.strip())
     cleaned = cleaned.strip("._")
@@ -291,6 +334,42 @@ def generate():
         return {
             "error": str(exc),
         }, 400
+
+
+@app.post("/send-to-intervals")
+def send_to_intervals():
+    try:
+        payload = request.get_json(force=True)
+        workout = build_workout_from_payload(payload)
+
+        date_str = (payload.get("date") or "").strip()
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_str):
+            raise ValueError("Inserisci una data valida nel formato YYYY-MM-DD.")
+
+        api_key = os.getenv("INTERVALS_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "Variabile INTERVALS_API_KEY non impostata sul PC."
+            )
+
+        events = create_or_update_intervals_workout(
+            api_key=api_key,
+            workout=workout,
+            date_str=date_str,
+        )
+
+        return {
+            "ok": True,
+            "message": "Workout inviato a Intervals.icu.",
+            "events": events,
+        }
+
+    except requests.RequestException as exc:
+        return {"error": f"Errore di rete: {exc}"}, 502
+    except RuntimeError as exc:
+        return {"error": str(exc)}, 502
+    except (ValueError, TypeError, json.JSONDecodeError) as exc:
+        return {"error": str(exc)}, 400
 
 
 if __name__ == "__main__":
