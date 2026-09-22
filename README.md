@@ -383,6 +383,7 @@ per il dettaglio delle strutture validate.
 - [Contratto piano pubblico WOL](docs/WOL_PUBLIC_PLAN.md)
 - [OAuth Intervals.icu per WOL](docs/WOL_OAUTH.md)
 - [PoC 1 tecnico WOL](docs/WOL_POC1_TECHNICAL.md)
+- [WorkOutLink PoC eseguibile](wol/README.md)
 
 ---
 
@@ -396,7 +397,7 @@ authoring / modello interno
 ├─ garmin_builder.py → JSON Garmin legacy
 └─ intervals_builder.py → Intervals.icu
 
-WorkOutLink (WOL) [fase successiva]
+WorkOutLink (WOL) [PoC 1 in implementazione]
         ↓
 link pubblico / publishing / delivery
         ↓
