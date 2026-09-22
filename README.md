@@ -1,8 +1,8 @@
-# Garmin Workout Generator
+# WorkOut Generator
 
-Generatore standalone di allenamenti Garmin per Windows.
+Generatore standalone di allenamenti strutturati, con modello interno indipendente dalla piattaforma.
 
-Permette di creare allenamenti di corsa tramite una GUI locale, generare il relativo file JSON e importarlo in Garmin Connect Web usando l'estensione **Share Your Garmin Workout**.
+Il progetto nasce come Garmin Workout Generator e mantiene il percorso Garmin JSON legacy già validato. La direzione corrente è però multipiattaforma: WorkOut Generator è il componente di authoring, mentre la pubblicazione e il delivery tramite link pubblico saranno affidati a **WorkOutLink (WOL)**. Il delivery Garmin via Intervals.icu è già validato end-to-end; Suunto è previsto tramite lo stesso bridge ma resta da validare sul dispositivo.
 
 ---
 
@@ -25,7 +25,7 @@ Per usare il programma non è necessario installare Python o Git.
 
 ## Prerequisito per importare il JSON in Garmin Connect
 
-Garmin Workout Generator crea il file JSON dell'allenamento.
+WorkOut Generator mantiene la possibilità di creare il file JSON Garmin dell'allenamento come percorso legacy/fallback.
 
 Per importarlo in Garmin Connect Web è necessario usare l'estensione browser:
 
@@ -203,7 +203,7 @@ Il file può quindi essere importato in Garmin Connect Web tramite **Share Your 
 
 ## Chiudere il programma
 
-Per terminare correttamente Garmin Workout Generator usa il pulsante:
+Per terminare correttamente WorkOut Generator usa il pulsante:
 
 ```text
 Chiudi
@@ -357,9 +357,9 @@ garmin-workout-generator/
 
 ---
 
-# Validazione Garmin
+# Validazione
 
-Il progetto distingue tra strutture:
+Il progetto distingue tra funzionalità e percorsi:
 
 - `VALIDATED`
 - `VALIDATED_REFERENCE`
@@ -377,12 +377,35 @@ per il dettaglio delle strutture validate.
 
 ---
 
+# Architettura attuale
+
+```text
+WorkOut Generator (WOG)
+        ↓
+authoring / modello interno
+        ↓
+├─ garmin_builder.py → JSON Garmin legacy
+└─ intervals_builder.py → Intervals.icu
+
+WorkOutLink (WOL) [fase successiva]
+        ↓
+link pubblico / publishing / delivery
+        ↓
+Intervals.icu
+   ├─ Garmin
+   └─ Suunto (da validare)
+```
+
+Il repository non viene rinominato in questa fase e i nomi tecnici legacy (eseguibile, spec e builder Garmin) restano invariati finché non sarà pianificata una migrazione controllata.
+
+---
+
 # Note
 
 - Il progetto non contiene ID Garmin personali hardcoded.
 - I `stepId` possono essere generati come `null` nelle combinazioni già validate.
 - La GUI e il generatore funzionano localmente.
-- L'importazione finale del JSON viene eseguita tramite Garmin Connect Web e l'estensione Share Your Garmin Workout.
+- Il percorso JSON Garmin resta disponibile come legacy/fallback; il percorso Intervals.icu è già validato end-to-end verso Garmin.
 - Un EXE non firmato digitalmente può mostrare un avviso Windows SmartScreen.
 
 ---
