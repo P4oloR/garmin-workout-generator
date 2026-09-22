@@ -1,6 +1,6 @@
 # Prerequisiti Intervals.icu
 
-Questa sezione documenta i prerequisiti necessari per usare Intervals.icu come ponte tra Garmin Workout Generator e Garmin Connect.
+Questa sezione documenta i prerequisiti necessari per usare Intervals.icu come bridge di delivery di **WorkOut Generator (WOG)**. Il percorso Garmin è già validato end-to-end; Suunto è previsto tramite lo stesso bridge ma deve ancora essere validato sul dispositivo.
 
 ## Account e connessioni
 
@@ -62,14 +62,14 @@ Per questo motivo:
 
 - prima di usare target `Pace`, impostare il **Ritmo soglia** in Intervals.icu;
 - verificare che Intervals.icu abbia generato correttamente le zone passo;
-- per evitare conversioni indesiderate di un valore di passo singolo, il Garmin Workout Generator userà preferibilmente un **range passo esplicito**, ad esempio `4:28-4:32 Pace`;
+- per evitare conversioni indesiderate di un valore di passo singolo, il WorkOut Generator userà preferibilmente un **range passo esplicito**, ad esempio `4:28-4:32 Pace`;
 - questo prerequisito è distinto dalla configurazione delle zone HR, che rimane necessaria per target come `Z1 HR`.
 
 ## Stato validazione
 
 ### VALIDATED
 
-Testato end-to-end sia tramite PoC sia, per il golden test misto, tramite la GUI reale del Garmin Workout Generator:
+Testato end-to-end sia tramite PoC sia, per il golden test misto, tramite la GUI reale del WorkOut Generator:
 
 - creazione workout via API Intervals.icu;
 - sincronizzazione nel calendario Intervals.icu;
