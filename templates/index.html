@@ -21,11 +21,18 @@
     </header>
 
     <section class="card name-card">
-        <label class="field">
-            <span>Nome allenamento</span>
-            <input id="workout-name" type="text" value="Allenamento Garmin">
-            <small class="field-error"></small>
-        </label>
+        <div class="step-grid">
+            <label class="field">
+                <span>Nome allenamento</span>
+                <input id="workout-name" type="text" value="Allenamento Garmin">
+                <small class="field-error"></small>
+            </label>
+            <label class="field">
+                <span>Data Intervals.icu</span>
+                <input id="workout-date" type="date">
+                <small class="field-error"></small>
+            </label>
+        </div>
     </section>
 
     <section id="builder" class="builder"></section>
@@ -49,6 +56,7 @@
     <div id="error" class="error-box hidden"></div>
 
     <div class="actions">
+        <button id="send-intervals" class="secondary" type="button">INVIA A INTERVALS.ICU</button>
         <button id="generate" class="primary-button" type="button">GENERA JSON GARMIN</button>
     </div>
 </main>
@@ -124,6 +132,7 @@ const preview = document.getElementById("preview");
 const errorBox = document.getElementById("error");
 const validationStatus = document.getElementById("validation-status");
 const generateButton = document.getElementById("generate");
+const sendIntervalsButton = document.getElementById("send-intervals");
 
 const roleNames = {
     run: "Corsa",
@@ -509,6 +518,7 @@ function validateAll() {
     validationStatus.classList.toggle("valid", valid);
     validationStatus.classList.toggle("invalid-status", !valid);
     generateButton.disabled = !valid;
+    sendIntervalsButton.disabled = !valid;
     return valid;
 }
 
@@ -594,6 +604,40 @@ function refreshUI() {
     validateAll();
 }
 
+async function sendToIntervals() {
+    errorBox.classList.add("hidden");
+    if (!validateAll()) return;
+
+    const dateInput = document.getElementById("workout-date");
+    setFieldError(dateInput, "");
+    if (!dateInput.value) {
+        setFieldError(dateInput, "Seleziona la data dell'allenamento.");
+        return;
+    }
+
+    const payload = {
+        name: document.getElementById("workout-name").value,
+        date: dateInput.value,
+        items: [...builder.children].map(serializeBlock),
+    };
+
+    const response = await fetch("/send-to-intervals", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+        errorBox.textContent = data.error || "Errore durante l'invio a Intervals.icu.";
+        errorBox.classList.remove("hidden");
+        return;
+    }
+
+    errorBox.textContent = data.message || "Workout inviato a Intervals.icu.";
+    errorBox.classList.remove("hidden");
+}
+
 async function generateJson() {
     errorBox.classList.add("hidden");
     if (!validateAll()) {
@@ -637,6 +681,7 @@ async function generateJson() {
 document.getElementById("add-step").addEventListener("click", () => addStep());
 document.getElementById("add-repeat").addEventListener("click", () => addRepeat());
 document.getElementById("generate").addEventListener("click", generateJson);
+document.getElementById("send-intervals").addEventListener("click", sendToIntervals);
 document.getElementById("workout-name").addEventListener("input", refreshUI);
 
 addStep({role: "warmup", end_type: "distance", value: 2.5, unit: "km", target: "none"});
