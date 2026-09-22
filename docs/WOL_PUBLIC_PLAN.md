@@ -94,6 +94,21 @@ Se l'autore cambia il piano, pubblica una nuova versione/link.
 
 Una futura gestione versioni può riutilizzare lo stesso concetto, ma non è richiesta nell'MVP.
 
+## Publisher del PoC
+
+Il primo PoC prevede un solo publisher autorizzato.
+
+```text
+WorkOut Generator
+-> publisher key
+-> WorkOutLink
+-> PublicPlan
+```
+
+La publisher key è un dettaglio tecnico locale dell'autore e non fa parte del `PublicPlan` né del link pubblico.
+
+Il supporto a più creator è fuori scope per il PoC 1.
+
 ## UX autore
 
 Flusso desiderato:
@@ -253,7 +268,7 @@ Intervals.icu e il provider dispositivo possono avere proprie condizioni; WOL de
 Il Public Plan PoC è completato quando:
 
 ```text
-1. autore pubblica una settimana;
+1. il publisher unico pubblica una settimana da WorkOut Generator;
 2. ottiene un URL pubblico;
 3. URL è apribile senza login;
 4. atleta sceglie data di inizio;
