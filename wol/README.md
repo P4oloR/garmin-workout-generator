@@ -6,8 +6,8 @@ Stato corrente:
 
 ```text
 [IMPLEMENTED]  D1 schema
-[IMPLEMENTED]  POST /api/publish/plan
-[IMPLEMENTED]  GET /p/<public_id>
+[VALIDATED REMOTE] POST /api/publish/plan
+[VALIDATED REMOTE] GET /p/<public_id>
 [IMPLEMENTED]  GET /privacy
 [TODO]         OAuth Intervals.icu
 [TODO]         bulk delivery
@@ -92,3 +92,22 @@ publisher -> WOL -> link pubblico
 ```
 
 OAuth e delivery Intervals.icu arriveranno nel passaggio successivo.
+
+
+## Milestone validata
+
+Il 2026-09-22 è stato validato il primo flusso pubblico remoto:
+
+```text
+publisher key
+-> POST /api/publish/plan
+-> Cloudflare Worker
+-> D1 remoto
+-> public_id
+-> URL workers.dev
+-> pagina pubblica visualizzata correttamente nel browser
+```
+
+Stato: `VALIDATED REMOTE` per il tratto publishing + public page.
+
+OAuth Intervals.icu e delivery verso Garmin/Suunto restano da implementare e validare.
