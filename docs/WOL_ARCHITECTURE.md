@@ -78,6 +78,40 @@ Legacy:
 models.py -> garmin_builder.py -> Garmin JSON
 ```
 
+## PoC 1 — Single Publisher
+
+La prima implementazione WOL è esplicitamente **single publisher**.
+
+Obiettivo:
+
+```text
+1 autore (noi)
+-> WorkOut Generator
+-> WorkOutLink
+-> link pubblico
+-> molti atleti
+```
+
+Il PoC 1 non include onboarding di altri creator, account autore multipli, ruoli o gestione team.
+
+Per proteggere l'endpoint di publishing, WOG userà una **publisher key** privata configurata fuori dal codice sorgente e inviata al backend WOL come credenziale di pubblicazione.
+
+Forma concettuale:
+
+```text
+Authorization: Bearer <WOL_PUBLISHER_KEY>
+```
+
+La publisher key:
+
+- appartiene solo al creator del PoC;
+- non compare nei link pubblici;
+- non viene inviata agli atleti;
+- non viene hardcodata nel repository;
+- è distinta dai token OAuth Intervals.icu degli atleti.
+
+Il multi-publisher è una milestone successiva e non deve complicare il PoC iniziale.
+
 ## Publishing
 
 Il publishing crea uno snapshot pubblico e immutabile del workout o del piano.
@@ -237,6 +271,8 @@ Fuori scope. Nessuna implementazione finché non viene studiato il percorso Trai
 Non implementare inizialmente:
 
 - account WOL obbligatori per atleti;
+- onboarding multi-publisher;
+- account/ruoli creator;
 - social/community;
 - commenti;
 - classifiche;
