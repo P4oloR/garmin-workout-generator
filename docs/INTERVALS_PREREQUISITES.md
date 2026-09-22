@@ -67,9 +67,9 @@ Per questo motivo:
 
 ## Stato validazione
 
-### VALIDATED_POC
+### VALIDATED
 
-Testato end-to-end con:
+Testato end-to-end sia tramite PoC sia, per il golden test misto, tramite la GUI reale del Garmin Workout Generator:
 
 - creazione workout via API Intervals.icu;
 - sincronizzazione nel calendario Intervals.icu;
@@ -82,7 +82,11 @@ Testato end-to-end con:
 - target HR a zona, convertito da Intervals.icu in range BPM;
 - target passo come range esplicito;
 - combinazione nello stesso repeat block di target `Pace` e target a zona HR (`Z1 HR`);
-- step a distanza per warmup, interval, recovery e cooldown.
+- step a distanza per warmup, interval, recovery e cooldown;
+- invio dalla GUI reale tramite API Intervals.icu;
+- ricezione in Garmin Connect e verifica finale sull'orologio Garmin.
+
+Golden test GUI validato il 2026-09-22: `3 km warmup -> 2x [1 km 4:28-4:32 Pace + 1 km Z1 HR] -> 2 km cooldown`.
 
 ### Da validare
 
