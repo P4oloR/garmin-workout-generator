@@ -1,10 +1,10 @@
-# Garmin Workout Generator
+# WorkOut Generator
 ## Manuale utente passo-passo
 
 Questo manuale spiega come:
 
 1. installare quello che serve sul PC;
-2. scaricare Garmin Workout Generator da GitHub;
+2. scaricare WorkOut Generator da GitHub;
 3. avviare il programma;
 4. creare un allenamento;
 5. generare il file `.json`;
@@ -26,7 +26,7 @@ Prima di iniziare servono:
 - Google Chrome o un browser compatibile;
 - l'estensione **Share Your Garmin Workout**.
 
-Garmin Workout Generator funziona localmente sul PC e genera un file JSON Garmin.
+WorkOut Generator funziona localmente sul PC e genera un file JSON Garmin.
 
 ---
 
@@ -134,7 +134,7 @@ Se la cartella `Progetti` esiste già, non è un problema.
 
 ---
 
-# 5. Scaricare Garmin Workout Generator da GitHub
+# 5. Scaricare WorkOut Generator da GitHub
 
 Nel Prompt dei comandi scrivi:
 
@@ -172,7 +172,7 @@ Se il comando termina senza errori, puoi procedere.
 
 ---
 
-# 7. Avviare Garmin Workout Generator
+# 7. Avviare WorkOut Generator
 
 Sempre dalla cartella del progetto esegui:
 
@@ -192,7 +192,7 @@ Apri Chrome e vai a:
 http://127.0.0.1:8780
 ```
 
-Dovrebbe comparire la schermata di Garmin Workout Generator.
+Dovrebbe comparire la schermata di WorkOut Generator.
 
 Se la pagina non si apre, controlla che la finestra con:
 
@@ -273,7 +273,7 @@ https://connect.garmin.com/
 
 Accedi normalmente con il tuo account Garmin.
 
-Garmin Workout Generator **non richiede le tue credenziali Garmin**.
+WorkOut Generator **non richiede le tue credenziali Garmin**.
 
 Il generatore crea solamente il file JSON sul tuo PC.
 
@@ -287,7 +287,7 @@ Una volta dentro Garmin Connect Web:
 2. assicurati che l'estensione Share Your Garmin Workout sia attiva;
 3. usa il comando di importazione aggiunto dall'estensione;
 4. premi **Import Workout**;
-5. seleziona il file `.json` creato con Garmin Workout Generator;
+5. seleziona il file `.json` creato con WorkOut Generator;
 6. conferma l'importazione.
 
 Se il file è accettato, il workout comparirà nel tuo account Garmin Connect.
@@ -303,7 +303,7 @@ Puoi quindi utilizzare le normali funzioni Garmin per inviarlo al dispositivo as
 Il flusso completo è:
 
 ```text
-Garmin Workout Generator
+WorkOut Generator
         ↓
 file JSON
         ↓
@@ -333,7 +333,7 @@ http://127.0.0.1:8780
 
 ---
 
-# 16. Come aggiornare Garmin Workout Generator
+# 16. Come aggiornare WorkOut Generator
 
 Apri il Prompt dei comandi e vai nella cartella del progetto:
 
@@ -361,7 +361,7 @@ python app.py
 
 ---
 
-# 17. Come chiudere Garmin Workout Generator
+# 17. Come chiudere WorkOut Generator
 
 Torna alla finestra del Prompt dei comandi dove è in esecuzione:
 
@@ -464,4 +464,4 @@ Prova prima con un workout semplice e verifica che l'estensione Share Your Garmi
 
 # In una frase
 
-**Garmin Workout Generator crea il file; Share Your Garmin Workout lo importa in Garmin Connect.**
+**WorkOut Generator crea l'allenamento. Il percorso JSON Garmin tramite Share Your Garmin Workout resta disponibile come modalità legacy/fallback.**
