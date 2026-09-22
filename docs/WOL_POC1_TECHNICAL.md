@@ -543,3 +543,31 @@ Il PoC 1 è completato solo quando:
 ```
 
 Solo allora il percorso **WOL Public Delivery -> Garmin** può essere marcato `VALIDATED`.
+
+
+---
+
+## Milestone raggiunta: publishing remoto
+
+Validato il 2026-09-22:
+
+```text
+single publisher
+-> WOL publisher key
+-> POST /api/publish/plan
+-> Cloudflare Worker remoto
+-> D1 remoto
+-> public URL workers.dev
+-> GET /p/<public_id>
+-> pagina pubblica renderizzata correttamente
+```
+
+Questa milestone promuove il tratto **WOL publishing -> public page** a `VALIDATED REMOTE`.
+
+Non promuove ancora a `VALIDATED` il percorso completo WOL Public Delivery, perché mancano:
+
+- OAuth Intervals.icu;
+- bulk delivery;
+- sincronizzazione Garmin Connect;
+- verifica su Garmin reale;
+- successiva verifica Suunto.
