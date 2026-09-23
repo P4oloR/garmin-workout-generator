@@ -336,3 +336,93 @@ select:focus {
         transform: translateY(-1px);
     }
 }
+
+
+/* WorkOutLink weekly publishing workspace */
+.week-card {
+    border-left: 4px solid #00796B;
+}
+
+.week-meta {
+    margin-top: 20px;
+}
+
+.week-add-field {
+    justify-content: flex-end;
+}
+
+.week-list {
+    display: grid;
+    gap: 10px;
+    margin: 22px 0;
+}
+
+.week-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px solid #DCE6E3;
+    border-radius: 12px;
+    background: #FBFCFC;
+}
+
+.week-item > div {
+    display: grid;
+    gap: 3px;
+}
+
+.week-item span {
+    color: #61736F;
+    font-size: 13px;
+}
+
+.week-item button {
+    border: 1px solid #F0B7B3;
+    border-radius: 9px;
+    background: white;
+    padding: 8px 10px;
+    color: #B42318;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.week-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.wol-result {
+    margin-top: 18px;
+    padding: 16px;
+    border: 1px solid #BFDAD4;
+    border-radius: 12px;
+    background: #F2FAF8;
+    display: grid;
+    gap: 8px;
+}
+
+.wol-result a {
+    color: #00695C;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 620px) {
+    .week-item {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .week-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .week-actions .primary-button,
+    .week-actions .secondary {
+        width: 100%;
+    }
+}
