@@ -175,7 +175,14 @@ async function showPublicPlan(request, publicId, env) {
     env.SESSION_SECRET
   );
 
-  return htmlResponse(renderPlanPage(plan, items, oauthConfigured));
+  const pageUrl = new URL(request.url);
+  const deliveryState = {
+    connected: pageUrl.searchParams.get("connected") === "1",
+    weekStart: pageUrl.searchParams.get("week_start") || "",
+    destination: pageUrl.searchParams.get("destination") || "",
+  };
+
+  return htmlResponse(renderPlanPage(plan, items, oauthConfigured, deliveryState));
 }
 
 async function oauthIntervalsStart(request, env) {
@@ -735,7 +742,7 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function renderPlanPage(plan, items, oauthConfigured) {
+function renderPlanPage(plan, items, oauthConfigured, deliveryState = {}) {
   const description = plan.description
     ? '<p class="description">' + escapeHtml(plan.description) + "</p>"
     : "";
@@ -746,6 +753,34 @@ function renderPlanPage(plan, items, oauthConfigured) {
       '<div class="name">' + escapeHtml(workoutName(item.workout)) + "</div>" +
     "</article>"
   ).join("");
+
+  const prefilledWeekStart = /^\d{4}-\d{2}-\d{2}$/.test(deliveryState.weekStart)
+    ? deliveryState.weekStart
+    : "";
+
+  const autoDelivery =
+    deliveryState.connected &&
+    prefilledWeekStart &&
+    ["garmin", "suunto"].includes(deliveryState.destination)
+      ? '<div id="delivery-status" class="delivery-status">Invio del piano a Intervals.icu…</div>' +
+        '<script>' +
+        '(async()=>{const el=document.getElementById("delivery-status");try{' +
+        'const r=await fetch("/api/deliver/plan",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(' +
+        JSON.stringify({
+          public_id: "__PUBLIC_ID__",
+          week_start: "__WEEK_START__",
+          destination: "__DESTINATION__",
+        }) +
+        ')});const data=await r.json();if(!r.ok)throw new Error(data.error||"delivery_failed");' +
+        'el.className="delivery-status success";el.textContent="Piano inviato a Intervals.icu: "+data.events+" allenamenti. Ora verifica il calendario Intervals.icu e la sincronizzazione verso il dispositivo.";' +
+        '}catch(e){el.className="delivery-status error";el.textContent="Invio non riuscito: "+e.message;}})();' +
+        '</script>'
+      : "";
+
+  const autoDeliveryHtml = autoDelivery
+    .replace("__PUBLIC_ID__", escapeHtml(plan.public_id))
+    .replace("__WEEK_START__", escapeHtml(prefilledWeekStart))
+    .replace("__DESTINATION__", escapeHtml(deliveryState.destination));
 
   return pageShell(
     escapeHtml(plan.title),
@@ -764,7 +799,7 @@ function renderPlanPage(plan, items, oauthConfigured) {
           ? '<form method="get" action="/oauth/intervals/start">' +
               '<input type="hidden" name="public_id" value="' + escapeHtml(plan.public_id) + '">' +
               '<label for="week-start">Settimana che inizia lunedì</label>' +
-              '<input id="week-start" name="week_start" type="date" required>' +
+              '<input id="week-start" name="week_start" type="date" value="' + escapeHtml(prefilledWeekStart) + '" required>' +
               '<div class="buttons">' +
                 '<button type="submit" name="destination" value="garmin">Garmin</button>' +
                 '<button type="submit" name="destination" value="suunto">Suunto</button>' +
@@ -776,6 +811,7 @@ function renderPlanPage(plan, items, oauthConfigured) {
             '<div class="buttons"><button type="button" disabled>Garmin</button><button type="button" disabled>Suunto</button></div>' +
             '<p class="note">OAuth Intervals.icu in attesa di approvazione/configurazione.</p>') +
       "</section>" +
+      autoDeliveryHtml +
       "<details><summary>Configurazione iniziale</summary>" +
       "<p>Per target cardio configura le zone HR in Intervals.icu. Per target passo configura ritmo soglia e zone passo. Garmin/Suunto dovranno avere l'upload degli allenamenti pianificati attivo.</p>" +
       "</details>" +
@@ -843,6 +879,7 @@ function pageShell(title, body) {
     ".day{font-size:.78rem;font-weight:800;text-transform:uppercase;color:#60736E;letter-spacing:.04em}" +
     ".name{font-size:1.15rem;font-weight:800;margin-top:5px;color:#173C35}" +
     ".delivery{margin-top:26px;padding:24px;border:1px solid #D7E2DF;border-radius:16px;background:#fff;box-shadow:0 5px 18px rgba(29,44,72,.04)}" +
+    ".delivery-status{margin-top:16px;padding:14px 16px;border-radius:12px;background:#EEF4F2;color:#465853;font-weight:750}.delivery-status.success{background:#E6F5EE;color:#00695C}.delivery-status.error{background:#FDECEC;color:#B42318}" +
     "label{display:block;font-weight:800;margin-bottom:9px;color:#465853}" +
     "input,button{font:inherit;padding:12px 14px;border-radius:10px;border:1px solid #C8D6D2}" +
     "input{width:min(320px,100%);background:#fff;color:#18312B}" +
