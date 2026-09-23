@@ -18,7 +18,19 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname.startsWith("/p/")) {
-      return showPublicPlan(decodeURIComponent(url.pathname.slice(3)), env);
+      return showPublicPlan(request, decodeURIComponent(url.pathname.slice(3)), env);
+    }
+
+    if (request.method === "GET" && url.pathname === "/oauth/intervals/start") {
+      return oauthIntervalsStart(request, env);
+    }
+
+    if (request.method === "GET" && url.pathname === "/oauth/intervals/callback") {
+      return oauthIntervalsCallback(request, env);
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/deliver/plan") {
+      return deliverPlan(request, env);
     }
 
     if (request.method === "GET" && url.pathname === "/privacy") {
@@ -117,7 +129,7 @@ async function publishPlan(request, env) {
   }
 }
 
-async function showPublicPlan(publicId, env) {
+async function showPublicPlan(request, publicId, env) {
   if (!publicId || publicId.length > 128) {
     return new Response("Not found", { status: 404 });
   }
@@ -157,7 +169,459 @@ async function showPublicPlan(publicId, env) {
     }
   }
 
-  return htmlResponse(renderPlanPage(plan, items));
+  const oauthConfigured = Boolean(
+    env.INTERVALS_CLIENT_ID &&
+    env.INTERVALS_CLIENT_SECRET &&
+    env.SESSION_SECRET
+  );
+
+  return htmlResponse(renderPlanPage(plan, items, oauthConfigured));
+}
+
+async function oauthIntervalsStart(request, env) {
+  if (!oauthReady(env)) {
+    return htmlResponse(renderSetupPending(), 503);
+  }
+
+  const url = new URL(request.url);
+  const publicId = url.searchParams.get("public_id") || "";
+  const weekStart = url.searchParams.get("week_start") || "";
+  const destination = url.searchParams.get("destination") || "";
+
+  if (!(await publicPlanExists(publicId, env))) {
+    return jsonResponse({ error: "plan_not_found" }, 404);
+  }
+
+  if (!isValidMondayDate(weekStart)) {
+    return jsonResponse({ error: "invalid_week_start" }, 400);
+  }
+
+  if (!["garmin", "suunto"].includes(destination)) {
+    return jsonResponse({ error: "invalid_destination" }, 400);
+  }
+
+  let sessionId = readCookie(request, "wol_session");
+  const isNewSession = !sessionId;
+  if (!sessionId) {
+    sessionId = randomToken(24);
+  }
+
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    "INSERT OR IGNORE INTO athlete_sessions (session_id, created_at, updated_at) VALUES (?, ?, ?)"
+  ).bind(sessionId, now, now).run();
+
+  const state = randomToken(32);
+  await env.DB.prepare(
+    "INSERT INTO oauth_states (state, session_id, public_id, week_start, destination, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+  ).bind(state, sessionId, publicId, weekStart, destination, now).run();
+
+  const redirectUri = url.origin + "/oauth/intervals/callback";
+  const authorize = new URL("https://intervals.icu/oauth/authorize");
+  authorize.searchParams.set("client_id", env.INTERVALS_CLIENT_ID);
+  authorize.searchParams.set("redirect_uri", redirectUri);
+  authorize.searchParams.set("scope", "CALENDAR:WRITE");
+  authorize.searchParams.set("state", state);
+
+  const headers = new Headers({ location: authorize.toString() });
+  if (isNewSession) {
+    headers.append("set-cookie", buildSessionCookie(sessionId, url.protocol === "https:"));
+  }
+
+  return new Response(null, { status: 302, headers });
+}
+
+async function oauthIntervalsCallback(request, env) {
+  if (!oauthReady(env)) {
+    return htmlResponse(renderSetupPending(), 503);
+  }
+
+  const url = new URL(request.url);
+  const error = url.searchParams.get("error");
+  if (error) {
+    return htmlResponse(renderOAuthError(error), 400);
+  }
+
+  const code = url.searchParams.get("code") || "";
+  const state = url.searchParams.get("state") || "";
+  if (!code || !state) {
+    return jsonResponse({ error: "missing_code_or_state" }, 400);
+  }
+
+  const saved = await env.DB.prepare(
+    "SELECT state, session_id, public_id, week_start, destination, created_at FROM oauth_states WHERE state = ?"
+  ).bind(state).first();
+
+  if (!saved) {
+    return jsonResponse({ error: "invalid_oauth_state" }, 400);
+  }
+
+  const stateAgeMs = Date.now() - Date.parse(saved.created_at);
+  if (!Number.isFinite(stateAgeMs) || stateAgeMs < 0 || stateAgeMs > 10 * 60 * 1000) {
+    await env.DB.prepare("DELETE FROM oauth_states WHERE state = ?").bind(state).run();
+    return jsonResponse({ error: "expired_oauth_state" }, 400);
+  }
+
+  const cookieSession = readCookie(request, "wol_session");
+  if (!cookieSession || !safeEqual(cookieSession, saved.session_id)) {
+    return jsonResponse({ error: "oauth_session_mismatch" }, 400);
+  }
+
+  const form = new URLSearchParams();
+  form.set("client_id", env.INTERVALS_CLIENT_ID);
+  form.set("client_secret", env.INTERVALS_CLIENT_SECRET);
+  form.set("code", code);
+
+  const tokenResponse = await fetch("https://intervals.icu/api/oauth/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: form,
+  });
+
+  if (!tokenResponse.ok) {
+    console.error("Intervals token exchange failed", tokenResponse.status);
+    return htmlResponse(renderOAuthError("token_exchange_failed"), 502);
+  }
+
+  const tokenData = await tokenResponse.json();
+  if (!tokenData.access_token || !tokenData.athlete?.id) {
+    return htmlResponse(renderOAuthError("invalid_token_response"), 502);
+  }
+
+  const encryptedToken = await encryptSecret(tokenData.access_token, env.SESSION_SECRET);
+  const updatedAt = new Date().toISOString();
+
+  await env.DB.prepare(
+    "UPDATE athlete_sessions SET intervals_athlete_id = ?, access_token_encrypted = ?, granted_scopes = ?, updated_at = ? WHERE session_id = ?"
+  ).bind(
+    String(tokenData.athlete.id),
+    encryptedToken,
+    String(tokenData.scope || ""),
+    updatedAt,
+    saved.session_id
+  ).run();
+
+  await env.DB.prepare("DELETE FROM oauth_states WHERE state = ?").bind(state).run();
+
+  const returnUrl = new URL("/p/" + encodeURIComponent(saved.public_id), url.origin);
+  returnUrl.searchParams.set("connected", "1");
+  returnUrl.searchParams.set("week_start", saved.week_start);
+  returnUrl.searchParams.set("destination", saved.destination);
+
+  return Response.redirect(returnUrl.toString(), 302);
+}
+
+async function deliverPlan(request, env) {
+  if (!oauthReady(env)) {
+    return jsonResponse({ error: "oauth_not_configured" }, 503);
+  }
+
+  const sessionId = readCookie(request, "wol_session");
+  if (!sessionId) {
+    return jsonResponse({ error: "intervals_not_connected" }, 401);
+  }
+
+  let payload;
+  try {
+    payload = await request.json();
+  } catch {
+    return jsonResponse({ error: "invalid_json" }, 400);
+  }
+
+  const publicId = typeof payload.public_id === "string" ? payload.public_id : "";
+  const weekStart = typeof payload.week_start === "string" ? payload.week_start : "";
+  const destination = typeof payload.destination === "string" ? payload.destination : "";
+
+  if (!isValidMondayDate(weekStart)) {
+    return jsonResponse({ error: "invalid_week_start" }, 400);
+  }
+
+  if (!["garmin", "suunto"].includes(destination)) {
+    return jsonResponse({ error: "invalid_destination" }, 400);
+  }
+
+  const session = await env.DB.prepare(
+    "SELECT intervals_athlete_id, access_token_encrypted, granted_scopes FROM athlete_sessions WHERE session_id = ?"
+  ).bind(sessionId).first();
+
+  if (!session?.access_token_encrypted) {
+    return jsonResponse({ error: "intervals_not_connected" }, 401);
+  }
+
+  const scopes = String(session.granted_scopes || "").split(",").map((s) => s.trim());
+  if (!scopes.includes("CALENDAR:WRITE")) {
+    return jsonResponse({ error: "calendar_write_scope_missing" }, 403);
+  }
+
+  const plan = await env.DB.prepare(
+    "SELECT id, title, status FROM public_plans WHERE public_id = ?"
+  ).bind(publicId).first();
+
+  if (!plan || plan.status !== "published") {
+    return jsonResponse({ error: "plan_not_found" }, 404);
+  }
+
+  const { results } = await env.DB.prepare(
+    "SELECT item_id, day_offset, workout_snapshot FROM plan_items WHERE plan_id = ? ORDER BY day_offset ASC, display_order ASC, id ASC"
+  ).bind(plan.id).all();
+
+  if (!results?.length) {
+    return jsonResponse({ error: "empty_plan" }, 400);
+  }
+
+  const events = [];
+  try {
+    for (const row of results) {
+      const workout = JSON.parse(row.workout_snapshot);
+      const date = addDaysToIsoDate(weekStart, row.day_offset);
+      events.push({
+        category: "WORKOUT",
+        start_date_local: date + "T00:00:00",
+        type: "Run",
+        name: workoutName(workout),
+        description: buildIntervalsWorkoutSnapshot(workout),
+        external_id: "wol:" + publicId + ":" + row.item_id + ":" + date,
+      });
+    }
+  } catch (error) {
+    console.error("Workout conversion failed", error);
+    return jsonResponse({ error: "unsupported_workout", details: String(error.message || error) }, 400);
+  }
+
+  let accessToken;
+  try {
+    accessToken = await decryptSecret(session.access_token_encrypted, env.SESSION_SECRET);
+  } catch (error) {
+    console.error("Token decrypt failed", error);
+    return jsonResponse({ error: "stored_token_invalid" }, 500);
+  }
+
+  const intervalsResponse = await fetch(
+    "https://intervals.icu/api/v1/athlete/0/events/bulk?upsert=true",
+    {
+      method: "POST",
+      headers: {
+        authorization: "Bearer " + accessToken,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(events),
+    }
+  );
+
+  if (intervalsResponse.status === 401 || intervalsResponse.status === 403) {
+    return jsonResponse({ error: "intervals_authorization_failed" }, 401);
+  }
+
+  if (!intervalsResponse.ok) {
+    const errorText = await intervalsResponse.text();
+    console.error("Intervals bulk delivery failed", intervalsResponse.status, errorText.slice(0, 500));
+    return jsonResponse({ error: "intervals_delivery_failed", status: intervalsResponse.status }, 502);
+  }
+
+  const delivered = await intervalsResponse.json();
+  return jsonResponse({
+    ok: true,
+    destination,
+    events: Array.isArray(delivered) ? delivered.length : events.length,
+  });
+}
+
+function buildIntervalsWorkoutSnapshot(workout) {
+  if (!workout || typeof workout !== "object" || Array.isArray(workout)) {
+    throw new Error("Workout snapshot must be an object");
+  }
+
+  if (!Array.isArray(workout.steps) || workout.steps.length === 0) {
+    throw new Error("Workout snapshot must contain steps");
+  }
+
+  const lines = [];
+  for (const item of workout.steps) {
+    if (item && Number.isInteger(item.repetitions) && Array.isArray(item.steps)) {
+      if (item.repetitions <= 0 || item.steps.length === 0) {
+        throw new Error("Invalid repeat block");
+      }
+      lines.push(String(item.repetitions) + "x");
+      for (const step of item.steps) {
+        lines.push(buildIntervalsStepSnapshot(step));
+      }
+      continue;
+    }
+
+    lines.push(buildIntervalsStepSnapshot(item));
+  }
+
+  return lines.join("\n");
+}
+
+function buildIntervalsStepSnapshot(step) {
+  if (!step || typeof step !== "object" || Array.isArray(step)) {
+    throw new Error("Invalid workout step");
+  }
+
+  if (step.end_type === "lap_button") {
+    throw new Error("Intervals.icu export: LAP button is not yet validated");
+  }
+
+  let duration;
+  if (step.end_type === "time") {
+    const seconds = Number(step.value);
+    if (!(seconds > 0)) throw new Error("Invalid time step value");
+    duration = Number.isInteger(seconds) && seconds % 60 === 0
+      ? String(seconds / 60) + "m"
+      : formatNumber(seconds) + "s";
+  } else if (step.end_type === "distance") {
+    const meters = Number(step.value);
+    if (!(meters > 0)) throw new Error("Invalid distance step value");
+    duration = step.preferred_unit === "km"
+      ? formatNumber(meters / 1000) + "km"
+      : formatNumber(meters) + "m";
+  } else {
+    throw new Error("Unsupported end type: " + String(step.end_type));
+  }
+
+  const target = step.target || { kind: "none" };
+  let targetText = "";
+  if (target.kind === "heart_rate_zone") {
+    targetText = " Z" + Number(target.zone_number) + " HR";
+  } else if (target.kind === "heart_rate_range") {
+    targetText = " " + Number(target.min_bpm) + "-" + Number(target.max_bpm) + " HR";
+  } else if (target.kind === "pace_range") {
+    targetText =
+      " " +
+      formatPace(target.pace_fast_seconds_per_km) +
+      "-" +
+      formatPace(target.pace_slow_seconds_per_km) +
+      " Pace";
+  } else if (target.kind !== "none") {
+    throw new Error("Unsupported target kind: " + String(target.kind));
+  }
+
+  const intensityByRole = {
+    warmup: "warmup",
+    interval: "interval",
+    recovery: "recovery",
+    cooldown: "cooldown",
+  };
+  const intensity = intensityByRole[step.role];
+  const intensityText = intensity ? " intensity=" + intensity : "";
+
+  return "- " + duration + targetText + intensityText;
+}
+
+function formatNumber(value) {
+  const number = Number(value);
+  return Number.isInteger(number) ? String(number) : String(number);
+}
+
+function formatPace(secondsPerKm) {
+  const seconds = Math.round(Number(secondsPerKm));
+  if (!(seconds > 0)) throw new Error("Invalid pace target");
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return String(minutes) + ":" + String(remainder).padStart(2, "0");
+}
+
+function oauthReady(env) {
+  return Boolean(
+    env.INTERVALS_CLIENT_ID &&
+    env.INTERVALS_CLIENT_SECRET &&
+    env.SESSION_SECRET
+  );
+}
+
+async function publicPlanExists(publicId, env) {
+  if (!publicId) return false;
+  const row = await env.DB.prepare(
+    "SELECT 1 AS ok FROM public_plans WHERE public_id = ? AND status = 'published'"
+  ).bind(publicId).first();
+  return Boolean(row?.ok);
+}
+
+function isValidMondayDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(value + "T00:00:00Z");
+  return !Number.isNaN(date.getTime()) && date.getUTCDay() === 1;
+}
+
+function addDaysToIsoDate(value, days) {
+  const date = new Date(value + "T00:00:00Z");
+  date.setUTCDate(date.getUTCDate() + Number(days));
+  return date.toISOString().slice(0, 10);
+}
+
+function readCookie(request, name) {
+  const cookie = request.headers.get("cookie") || "";
+  for (const part of cookie.split(";")) {
+    const [key, ...rest] = part.trim().split("=");
+    if (key === name) return decodeURIComponent(rest.join("="));
+  }
+  return null;
+}
+
+function buildSessionCookie(sessionId, secure) {
+  return "wol_session=" + encodeURIComponent(sessionId) +
+    "; Path=/; HttpOnly; SameSite=Lax" +
+    (secure ? "; Secure" : "") +
+    "; Max-Age=2592000";
+}
+
+function randomToken(byteLength) {
+  const bytes = new Uint8Array(byteLength);
+  crypto.getRandomValues(bytes);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+}
+
+async function deriveEncryptionKey(secret) {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(secret)
+  );
+  return crypto.subtle.importKey("raw", digest, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+}
+
+async function encryptSecret(value, secret) {
+  const key = await deriveEncryptionKey(secret);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ciphertext = new Uint8Array(
+    await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv },
+      key,
+      new TextEncoder().encode(value)
+    )
+  );
+  const combined = new Uint8Array(iv.length + ciphertext.length);
+  combined.set(iv, 0);
+  combined.set(ciphertext, iv.length);
+  return bytesToBase64Url(combined);
+}
+
+async function decryptSecret(encoded, secret) {
+  const combined = base64UrlToBytes(encoded);
+  if (combined.length <= 12) throw new Error("Invalid encrypted payload");
+  const iv = combined.slice(0, 12);
+  const ciphertext = combined.slice(12);
+  const key = await deriveEncryptionKey(secret);
+  const plaintext = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv },
+    key,
+    ciphertext
+  );
+  return new TextDecoder().decode(plaintext);
+}
+
+function bytesToBase64Url(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+}
+
+function base64UrlToBytes(value) {
+  const padded = value.replaceAll("-", "+").replaceAll("_", "/") + "===".slice((value.length + 3) % 4);
+  const binary = atob(padded);
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
 function validatePlan(payload) {
@@ -271,7 +735,7 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function renderPlanPage(plan, items) {
+function renderPlanPage(plan, items, oauthConfigured) {
   const description = plan.description
     ? '<p class="description">' + escapeHtml(plan.description) + "</p>"
     : "";
@@ -293,10 +757,21 @@ function renderPlanPage(plan, items) {
         (workoutCards || "<p>Nessun allenamento disponibile.</p>") +
       "</section>" +
       '<section class="delivery">' +
-        '<label for="week-start">Settimana che inizia lunedì</label>' +
-        '<input id="week-start" type="date" disabled>' +
-        '<div class="buttons"><button type="button" disabled>Garmin</button><button type="button" disabled>Suunto</button></div>' +
-        '<p class="note">Delivery OAuth in arrivo nel prossimo step del PoC. Il piano pubblico è già consultabile.</p>' +
+        (oauthConfigured
+          ? '<form method="get" action="/oauth/intervals/start">' +
+              '<input type="hidden" name="public_id" value="' + escapeHtml(plan.public_id) + '">' +
+              '<label for="week-start">Settimana che inizia lunedì</label>' +
+              '<input id="week-start" name="week_start" type="date" required>' +
+              '<div class="buttons">' +
+                '<button type="submit" name="destination" value="garmin">Garmin</button>' +
+                '<button type="submit" name="destination" value="suunto">Suunto</button>' +
+              '</div>' +
+              '<p class="note">Al primo utilizzo verrai reindirizzato a Intervals.icu per autorizzare il calendario.</p>' +
+            '</form>'
+          : '<label for="week-start">Settimana che inizia lunedì</label>' +
+            '<input id="week-start" type="date" disabled>' +
+            '<div class="buttons"><button type="button" disabled>Garmin</button><button type="button" disabled>Suunto</button></div>' +
+            '<p class="note">OAuth Intervals.icu in attesa di approvazione/configurazione.</p>') +
       "</section>" +
       "<details><summary>Configurazione iniziale</summary>" +
       "<p>Per target cardio configura le zone HR in Intervals.icu. Per target passo configura ritmo soglia e zone passo. Garmin/Suunto dovranno avere l'upload degli allenamenti pianificati attivo.</p>" +
@@ -312,12 +787,33 @@ function renderHome() {
   );
 }
 
+function renderSetupPending() {
+  return pageShell(
+    "OAuth non ancora disponibile - WorkOutLink",
+    '<main class="card"><div class="brand">WorkOutLink</div><h1>Connessione non ancora disponibile</h1>' +
+    "<p>L'app OAuth Intervals.icu è ancora in fase di approvazione o non è stata configurata nel Worker.</p>" +
+    "</main>",
+  );
+}
+
+function renderOAuthError(error) {
+  const message = error === "access_denied"
+    ? "Autorizzazione annullata. Nessun allenamento è stato aggiunto."
+    : "Non è stato possibile completare la connessione a Intervals.icu.";
+  return pageShell(
+    "OAuth error - WorkOutLink",
+    '<main class="card"><div class="brand">WorkOutLink</div><h1>Connessione Intervals.icu</h1><p>' +
+    escapeHtml(message) +
+    "</p></main>",
+  );
+}
+
 function renderPrivacy() {
   return pageShell(
     "Privacy - WorkOutLink",
     '<main class="card"><div class="brand">WorkOutLink</div><h1>Privacy</h1>' +
     "<p>WorkOutLink conserva gli snapshot dei piani pubblicati necessari alla condivisione tramite link.</p>" +
-    "<p>Nel prossimo step OAuth, i token Intervals.icu saranno gestiti lato server e non saranno esposti nel link pubblico o nel browser. WorkOutLink non richiede password Garmin o Suunto.</p>" +
+    "<p>I token Intervals.icu sono gestiti lato server, cifrati prima della memorizzazione e non sono esposti nel link pubblico o nel browser. WorkOutLink non richiede password Garmin o Suunto.</p>" +
     "</main>",
   );
 }
