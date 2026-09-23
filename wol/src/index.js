@@ -786,7 +786,7 @@ function renderPlanPage(plan, items, oauthConfigured) {
 function renderHome() {
   return pageShell(
     "WORKOUT Link",
-    '<main class="card"><section class="hero hero-link"><div class="product-brand product-brand-link" aria-label="WORKOUT Link"><div class="brand-symbol link-symbol" aria-hidden="true"><span class="link-a"></span><span class="link-b"></span><span class="link-spark"></span></div><div class="brand-copy"><div class="brand-master">WORKOUT</div><div class="brand-product">Link</div><div class="brand-tagline">SHARE <b>•</b> SCHEDULE <b>•</b> DELIVER</div></div></div><p class="hero-kicker">One plan. One link. Ready to train.</p></section><h1>Workouts, one link away.</h1><p>PoC single-publisher in costruzione.</p></main>',
+    '<main class="card"><section class="hero hero-link"><div class="product-brand product-brand-link" aria-label="WORKOUT Link"><div class="brand-symbol link-symbol" aria-hidden="true"><span class="link-a"></span><span class="link-b"></span><span class="link-spark"></span></div><div class="brand-copy"><div class="brand-master">WORKOUT</div><div class="brand-product">Link</div><div class="brand-tagline">SHARE <b>•</b> SCHEDULE <b>•</b> DELIVER</div></div></div><p class="hero-kicker">One plan. One link. Ready to train.</p></section><h1>Your training plan, one link away.</h1><p>Pubblica, condividi e consegna una settimana di allenamenti con un solo link.</p></main>',
   );
 }
 
