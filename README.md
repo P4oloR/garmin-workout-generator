@@ -459,3 +459,23 @@ Consulta il file:
 ```text
 LICENSE
 ```
+
+
+## WOG -> WOL remote publishing
+
+Validato end-to-end il 2026-09-23:
+
+```text
+WorkOut Generator GUI locale
+-> composizione settimana
+-> PUBBLICA SU WOL
+-> endpoint /publish-to-wol
+-> WorkOutLink Worker remoto
+-> D1 remoto
+-> URL pubblico
+-> pagina WOL corretta
+```
+
+Stato: **VALIDATED** per il tratto authoring/publishing WOG -> WOL remoto.
+
+La validazione ha incluso una settimana con più workout assegnati a giorni differenti e la corretta visualizzazione del piano pubblico.
