@@ -3,16 +3,16 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Garmin Standalone Workout Generator</title>
+    <title>WorkOut Generator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 <main class="page">
     <header class="hero">
         <div>
-            <p class="eyebrow">GARMIN STANDALONE WORKOUT GENERATOR</p>
+            <p class="eyebrow">WORKOUT GENERATOR</p>
             <h1>Workout builder</h1>
-            <p class="subtitle">Costruisci l'allenamento a blocchi e controllalo prima di generare il JSON Garmin.</p>
+            <p class="subtitle">Crea gli allenamenti, componi la settimana e pubblicala su WorkOutLink.</p>
         </div>
         <div class="hero-status">
             <span class="status">MVP</span>
@@ -51,6 +51,62 @@
             <span class="preview-label">anteprima</span>
         </div>
         <div id="preview" class="human-preview"></div>
+    </section>
+
+    <section class="card week-card">
+        <div class="section-heading">
+            <div>
+                <h2>Settimana WOL</h2>
+                <p class="section-note">Aggiungi l'allenamento corrente a un giorno della settimana e pubblica tutto con un solo link.</p>
+            </div>
+            <span class="preview-label">WorkOutLink</span>
+        </div>
+
+        <div class="week-meta step-grid">
+            <label class="field">
+                <span>Titolo settimana</span>
+                <input id="week-title" type="text" value="Settimana di allenamento">
+                <small class="field-error"></small>
+            </label>
+            <label class="field">
+                <span>Descrizione</span>
+                <input id="week-description" type="text" placeholder="Opzionale">
+                <small class="field-error"></small>
+            </label>
+            <label class="field">
+                <span>Giorno</span>
+                <select id="week-day">
+                    <option value="0">Lunedì</option>
+                    <option value="1">Martedì</option>
+                    <option value="2">Mercoledì</option>
+                    <option value="3">Giovedì</option>
+                    <option value="4">Venerdì</option>
+                    <option value="5">Sabato</option>
+                    <option value="6">Domenica</option>
+                </select>
+                <small class="field-error"></small>
+            </label>
+            <div class="field week-add-field">
+                <span>Allenamento corrente</span>
+                <button id="add-current-to-week" class="secondary" type="button">+ AGGIUNGI ALLA SETTIMANA</button>
+                <small class="field-error"></small>
+            </div>
+        </div>
+
+        <div id="week-list" class="week-list"></div>
+
+        <div id="wol-result" class="wol-result hidden">
+            <strong>Pubblicazione completata</strong>
+            <a id="wol-url" href="#" target="_blank" rel="noopener noreferrer"></a>
+            <div class="week-actions">
+                <button id="copy-wol-link" class="secondary" type="button">COPIA LINK</button>
+                <button id="open-wol-link" class="secondary" type="button">APRI LINK</button>
+            </div>
+        </div>
+
+        <div class="week-actions">
+            <button id="publish-wol" class="primary-button" type="button">PUBBLICA SU WOL</button>
+        </div>
     </section>
 
     <div id="error" class="error-box hidden"></div>
@@ -133,6 +189,11 @@ const errorBox = document.getElementById("error");
 const validationStatus = document.getElementById("validation-status");
 const generateButton = document.getElementById("generate");
 const sendIntervalsButton = document.getElementById("send-intervals");
+const weekList = document.getElementById("week-list");
+const publishWolButton = document.getElementById("publish-wol");
+const wolResult = document.getElementById("wol-result");
+const wolUrl = document.getElementById("wol-url");
+let weekItems = [];
 
 const roleNames = {
     run: "Corsa",
@@ -604,6 +665,137 @@ function refreshUI() {
     validateAll();
 }
 
+function currentWorkoutPayload() {
+    return {
+        name: document.getElementById("workout-name").value,
+        items: [...builder.children].map(serializeBlock),
+    };
+}
+
+function renderWeekList() {
+    weekList.innerHTML = "";
+
+    if (!weekItems.length) {
+        weekList.innerHTML = '<p class="empty-preview">Nessun allenamento aggiunto alla settimana.</p>';
+        publishWolButton.disabled = true;
+        return;
+    }
+
+    weekItems
+        .slice()
+        .sort((a, b) => a.day_offset - b.day_offset)
+        .forEach(item => {
+            const row = document.createElement("div");
+            row.className = "week-item";
+            row.innerHTML =
+                '<div><strong>' +
+                ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"][item.day_offset] +
+                '</strong><span>' + escapeHtmlClient(item.workout.name) + '</span></div>' +
+                '<button type="button" class="danger-action" data-remove="' + item.id + '">Rimuovi</button>';
+            weekList.appendChild(row);
+        });
+
+    weekList.querySelectorAll("[data-remove]").forEach(button => {
+        button.addEventListener("click", () => {
+            weekItems = weekItems.filter(item => item.id !== button.dataset.remove);
+            renderWeekList();
+        });
+    });
+
+    publishWolButton.disabled = false;
+}
+
+function escapeHtmlClient(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function addCurrentWorkoutToWeek() {
+    errorBox.classList.add("hidden");
+    if (!validateAll()) {
+        errorBox.textContent = "Correggi l'allenamento prima di aggiungerlo alla settimana.";
+        errorBox.classList.remove("hidden");
+        return;
+    }
+
+    const dayOffset = Number(document.getElementById("week-day").value);
+    const workout = JSON.parse(JSON.stringify(currentWorkoutPayload()));
+
+    weekItems = weekItems.filter(item => item.day_offset !== dayOffset);
+    weekItems.push({
+        id: crypto.randomUUID(),
+        day_offset: dayOffset,
+        workout,
+    });
+
+    renderWeekList();
+}
+
+async function publishWeekToWol() {
+    errorBox.classList.add("hidden");
+    wolResult.classList.add("hidden");
+
+    const title = document.getElementById("week-title").value.trim();
+    if (!title) {
+        errorBox.textContent = "Inserisci il titolo della settimana.";
+        errorBox.classList.remove("hidden");
+        return;
+    }
+
+    if (!weekItems.length) {
+        errorBox.textContent = "Aggiungi almeno un allenamento alla settimana.";
+        errorBox.classList.remove("hidden");
+        return;
+    }
+
+    publishWolButton.disabled = true;
+    publishWolButton.textContent = "PUBBLICAZIONE...";
+
+    try {
+        const response = await fetch("/publish-to-wol", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                title,
+                description: document.getElementById("week-description").value.trim(),
+                items: weekItems.map(item => ({
+                    day_offset: item.day_offset,
+                    workout: item.workout,
+                })),
+            }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || "Errore durante la pubblicazione su WOL.");
+        }
+
+        wolUrl.textContent = data.url;
+        wolUrl.href = data.url;
+        wolResult.classList.remove("hidden");
+    } catch (error) {
+        errorBox.textContent = error.message;
+        errorBox.classList.remove("hidden");
+    } finally {
+        publishWolButton.disabled = !weekItems.length;
+        publishWolButton.textContent = "PUBBLICA SU WOL";
+    }
+}
+
+async function copyWolLink() {
+    if (!wolUrl.href || wolResult.classList.contains("hidden")) return;
+    await navigator.clipboard.writeText(wolUrl.href);
+}
+
+function openWolLink() {
+    if (!wolUrl.href || wolResult.classList.contains("hidden")) return;
+    window.open(wolUrl.href, "_blank", "noopener,noreferrer");
+}
+
 async function sendToIntervals() {
     errorBox.classList.add("hidden");
     if (!validateAll()) return;
@@ -682,6 +874,10 @@ document.getElementById("add-step").addEventListener("click", () => addStep());
 document.getElementById("add-repeat").addEventListener("click", () => addRepeat());
 document.getElementById("generate").addEventListener("click", generateJson);
 document.getElementById("send-intervals").addEventListener("click", sendToIntervals);
+document.getElementById("add-current-to-week").addEventListener("click", addCurrentWorkoutToWeek);
+document.getElementById("publish-wol").addEventListener("click", publishWeekToWol);
+document.getElementById("copy-wol-link").addEventListener("click", copyWolLink);
+document.getElementById("open-wol-link").addEventListener("click", openWolLink);
 document.getElementById("workout-name").addEventListener("input", refreshUI);
 
 addStep({role: "warmup", end_type: "distance", value: 2.5, unit: "km", target: "none"});
@@ -691,6 +887,7 @@ addRepeat({
     recovery: {end_type: "distance", value: 150, unit: "m", target: "none"},
 });
 addStep({role: "cooldown", end_type: "distance", value: 1, unit: "km", target: "none"});
+renderWeekList();
 refreshUI();
 </script>
 </body>
