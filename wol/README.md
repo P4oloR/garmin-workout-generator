@@ -9,8 +9,8 @@ Stato corrente:
 [VALIDATED REMOTE] POST /api/publish/plan
 [VALIDATED REMOTE] GET /p/<public_id>
 [IMPLEMENTED]  GET /privacy
-[TODO]         OAuth Intervals.icu
-[TODO]         bulk delivery
+[PREPARED]     OAuth Intervals.icu (app approval pending)
+[PREPARED]     bulk delivery (not yet end-to-end validated)
 [TODO]         Garmin end-to-end via link pubblico
 [TODO]         Suunto end-to-end
 ```
@@ -91,7 +91,33 @@ In questa fase implementiamo solo:
 publisher -> WOL -> link pubblico
 ```
 
-OAuth e delivery Intervals.icu arriveranno nel passaggio successivo.
+Il codice per OAuth Intervals.icu e bulk delivery è ora predisposto ma resta **gated**: non viene attivato finché l'app OAuth WorkOutLink non è approvata e i secret non sono configurati.
+
+Endpoint predisposti:
+
+```text
+GET  /oauth/intervals/start
+GET  /oauth/intervals/callback
+POST /api/deliver/plan
+```
+
+Scope richiesto dal PoC:
+
+```text
+CALENDAR:WRITE
+```
+
+Il token OAuth viene mantenuto solo lato server e cifrato prima della memorizzazione in D1.
+
+Secret da configurare dopo l'approvazione:
+
+```text
+INTERVALS_CLIENT_ID
+INTERVALS_CLIENT_SECRET
+SESSION_SECRET
+```
+
+Non inserire questi valori nel repository.
 
 
 ## Milestone validata
@@ -111,3 +137,20 @@ publisher key
 Stato: `VALIDATED REMOTE` per il tratto publishing + public page.
 
 OAuth Intervals.icu e delivery verso Garmin/Suunto restano da implementare e validare.
+
+
+## OAuth application status
+
+La richiesta OAuth **WorkOutLink** è stata inviata a Intervals.icu il 2026-09-23 ed è attualmente in stato `Pending`.
+
+Redirect URI registrata:
+
+```text
+https://workoutlink.paolo-ricciotti.workers.dev/oauth/intervals/callback
+```
+
+Categoria richiesta: sincronizzazione allenamenti.
+
+Webhook: nessuno per il PoC 1.
+
+Il flusso OAuth reale non può essere promosso a `VALIDATED` finché l'app non viene approvata e provata con un atleta reale.
