@@ -537,3 +537,80 @@ select:focus {
         font-size: 9px;
     }
 }
+
+
+/* Weekly workout edit workflow */
+.name-card-header {
+    display: flex;
+    align-items: flex-end;
+    gap: 18px;
+    justify-content: space-between;
+}
+
+.name-card-grid {
+    flex: 1;
+}
+
+.new-workout-button {
+    white-space: nowrap;
+    margin-bottom: 18px;
+}
+
+.editing-banner {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border: 1px solid #F2B323;
+    border-radius: 10px;
+    background: #FFF9E8;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: #6A5420;
+    font-weight: 700;
+}
+
+.editing-banner button {
+    border: 0;
+    background: transparent;
+    color: #8A6510;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.week-item.is-editing {
+    border-color: #F2B323;
+    background: #FFFCF2;
+}
+
+.week-item-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.week-item .secondary-action {
+    border: 1px solid #00796B;
+    border-radius: 9px;
+    background: white;
+    padding: 8px 10px;
+    color: #00796B;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+@media (max-width: 760px) {
+    .name-card-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .new-workout-button {
+        margin-bottom: 0;
+    }
+
+    .editing-banner {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
