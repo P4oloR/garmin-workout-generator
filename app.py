@@ -255,6 +255,28 @@ WOL_BASE_URL = os.getenv(
 ).rstrip("/")
 
 
+def get_wol_publisher_key():
+    key = os.getenv("WOL_PUBLISHER_KEY")
+    if key:
+        return key.strip()
+
+    dev_vars_path = os.path.join(
+        os.path.abspath(os.path.dirname(__file__)),
+        "wol",
+        ".dev.vars",
+    )
+
+    try:
+        with open(dev_vars_path, "r", encoding="utf-8") as handle:
+            for line in handle:
+                if line.startswith("WOL_PUBLISHER_KEY="):
+                    return line.split("=", 1)[1].strip()
+    except OSError:
+        pass
+
+    return None
+
+
 def create_or_update_intervals_workout(api_key, workout, date_str):
     description = build_intervals_workout(workout)
     payload = [{
@@ -412,7 +434,7 @@ def publish_to_wol():
                 "La settimana può contenere al massimo 7 allenamenti."
             )
 
-        publisher_key = os.getenv("WOL_PUBLISHER_KEY")
+        publisher_key = get_wol_publisher_key()
         if not publisher_key:
             raise ValueError(
                 "Variabile WOL_PUBLISHER_KEY non impostata sul PC."
