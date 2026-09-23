@@ -571,3 +571,29 @@ Non promuove ancora a `VALIDATED` il percorso completo WOL Public Delivery, perc
 - sincronizzazione Garmin Connect;
 - verifica su Garmin reale;
 - successiva verifica Suunto.
+
+
+---
+
+## Milestone raggiunta: WOG -> WOL
+
+Validato il 2026-09-23:
+
+```text
+WOG GUI locale
+-> aggiunta di più workout alla settimana
+-> publish da GUI
+-> WOL remoto
+-> D1 remoto
+-> public URL
+-> pagina pubblica con giorni e workout corretti
+```
+
+Stato del tratto: `VALIDATED`.
+
+Restano fuori da questa validazione:
+
+- OAuth atleta Intervals.icu;
+- bulk delivery dal link pubblico;
+- Garmin Connect / dispositivo Garmin tramite WOL;
+- Suunto.
