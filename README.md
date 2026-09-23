@@ -255,6 +255,38 @@ http://127.0.0.1:8780
 
 ---
 
+# Pubblicazione su WorkOutLink
+
+WorkOut Generator include ora una workspace **Settimana WOL**.
+
+Flusso previsto:
+
+```text
+crea workout
+-> scegli giorno
+-> AGGIUNGI ALLA SETTIMANA
+-> modifica/crea il workout successivo
+-> aggiungi gli altri giorni
+-> PUBBLICA SU WOL
+-> ricevi link pubblico
+```
+
+Per il PoC single-publisher, WOG usa la publisher key locale. In sviluppo la legge dalla variabile ambiente `WOL_PUBLISHER_KEY` oppure, se presente, da:
+
+```text
+wol/.dev.vars
+```
+
+Il backend pubblico predefinito è:
+
+```text
+https://workoutlink.paolo-ricciotti.workers.dev
+```
+
+Questa integrazione non modifica `models.py` e mantiene separati i percorsi legacy Garmin e Intervals.icu.
+
+---
+
 # Test
 
 Per eseguire tutti i test automatici:
