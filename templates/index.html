@@ -27,17 +27,24 @@
     </header>
 
     <section class="card name-card">
-        <div class="step-grid">
-            <label class="field">
-                <span>Nome allenamento</span>
-                <input id="workout-name" type="text" value="Allenamento Garmin">
-                <small class="field-error"></small>
-            </label>
-            <label class="field">
-                <span>Data Intervals.icu</span>
-                <input id="workout-date" type="date">
-                <small class="field-error"></small>
-            </label>
+        <div class="name-card-header">
+            <div class="step-grid name-card-grid">
+                <label class="field">
+                    <span>Nome allenamento</span>
+                    <input id="workout-name" type="text" value="Allenamento Garmin">
+                    <small class="field-error"></small>
+                </label>
+                <label class="field">
+                    <span>Data Intervals.icu</span>
+                    <input id="workout-date" type="date">
+                    <small class="field-error"></small>
+                </label>
+            </div>
+            <button id="new-workout" class="secondary new-workout-button" type="button">+ NUOVO WORKOUT</button>
+        </div>
+        <div id="editing-banner" class="editing-banner hidden">
+            <span>Stai modificando un allenamento già inserito nella settimana.</span>
+            <button id="cancel-edit-workout" type="button">ANNULLA MODIFICA</button>
         </div>
     </section>
 
@@ -200,6 +207,7 @@ const publishWolButton = document.getElementById("publish-wol");
 const wolResult = document.getElementById("wol-result");
 const wolUrl = document.getElementById("wol-url");
 let weekItems = [];
+let editingWeekItemId = null;
 
 const roleNames = {
     run: "Corsa",
@@ -693,24 +701,36 @@ function renderWeekList() {
         .forEach(item => {
             const row = document.createElement("div");
             row.className = "week-item";
+            if (item.id === editingWeekItemId) row.classList.add("is-editing");
+
             row.innerHTML =
-                '<div><strong>' +
+                '<div class="week-item-copy"><strong>' +
                 ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"][item.day_offset] +
                 '</strong><span>' + escapeHtmlClient(item.workout.name) + '</span></div>' +
-                '<button type="button" class="danger-action" data-remove="' + item.id + '">Rimuovi</button>';
+                '<div class="week-item-actions">' +
+                    '<button type="button" class="secondary-action" data-edit="' + item.id + '">Modifica</button>' +
+                    '<button type="button" class="danger-action" data-remove="' + item.id + '">Rimuovi</button>' +
+                '</div>';
             weekList.appendChild(row);
         });
 
+    weekList.querySelectorAll("[data-edit]").forEach(button => {
+        button.addEventListener("click", () => editWeekWorkout(button.dataset.edit));
+    });
+
     weekList.querySelectorAll("[data-remove]").forEach(button => {
         button.addEventListener("click", () => {
-            weekItems = weekItems.filter(item => item.id !== button.dataset.remove);
+            const id = button.dataset.remove;
+            weekItems = weekItems.filter(item => item.id !== id);
+            if (editingWeekItemId === id) {
+                resetWorkoutBuilder();
+            }
             renderWeekList();
         });
     });
 
     publishWolButton.disabled = false;
 }
-
 function escapeHtmlClient(value) {
     return String(value ?? "")
         .replaceAll("&", "&amp;")
@@ -718,6 +738,58 @@ function escapeHtmlClient(value) {
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
+}
+
+function loadWorkoutIntoBuilder(workout) {
+    builder.innerHTML = "";
+    document.getElementById("workout-name").value = workout.name || "";
+
+    (workout.items || []).forEach(item => {
+        if (item.type === "step") {
+            addStep(item);
+        } else if (item.type === "repeat") {
+            addRepeat(item);
+        }
+    });
+
+    if (!builder.children.length) {
+        addStep({role: "run", end_type: "distance", value: 1, unit: "km", target: "none"});
+    }
+
+    refreshUI();
+}
+
+function setEditingMode(itemId) {
+    editingWeekItemId = itemId;
+    const banner = document.getElementById("editing-banner");
+    const button = document.getElementById("add-current-to-week");
+
+    banner.classList.toggle("hidden", !itemId);
+    button.textContent = itemId ? "AGGIORNA ALLENAMENTO" : "+ AGGIUNGI ALLA SETTIMANA";
+    renderWeekList();
+}
+
+function editWeekWorkout(itemId) {
+    const item = weekItems.find(entry => entry.id === itemId);
+    if (!item) return;
+
+    document.getElementById("week-day").value = String(item.day_offset);
+    loadWorkoutIntoBuilder(JSON.parse(JSON.stringify(item.workout)));
+    setEditingMode(itemId);
+    window.scrollTo({top: 0, behavior: "smooth"});
+}
+
+function resetWorkoutBuilder() {
+    editingWeekItemId = null;
+    builder.innerHTML = "";
+    document.getElementById("workout-name").value = "Nuovo allenamento";
+    document.getElementById("workout-date").value = "";
+    addStep({role: "run", end_type: "distance", value: 1, unit: "km", target: "none"});
+    document.getElementById("editing-banner").classList.add("hidden");
+    document.getElementById("add-current-to-week").textContent = "+ AGGIUNGI ALLA SETTIMANA";
+    errorBox.classList.add("hidden");
+    refreshUI();
+    renderWeekList();
 }
 
 function addCurrentWorkoutToWeek() {
@@ -731,16 +803,31 @@ function addCurrentWorkoutToWeek() {
     const dayOffset = Number(document.getElementById("week-day").value);
     const workout = JSON.parse(JSON.stringify(currentWorkoutPayload()));
 
-    weekItems = weekItems.filter(item => item.day_offset !== dayOffset);
-    weekItems.push({
-        id: crypto.randomUUID(),
-        day_offset: dayOffset,
-        workout,
-    });
+    if (editingWeekItemId) {
+        const editingItem = weekItems.find(item => item.id === editingWeekItemId);
+        if (!editingItem) {
+            setEditingMode(null);
+            return;
+        }
+
+        weekItems = weekItems.filter(item =>
+            item.id === editingWeekItemId || item.day_offset !== dayOffset
+        );
+
+        editingItem.day_offset = dayOffset;
+        editingItem.workout = workout;
+        setEditingMode(null);
+    } else {
+        weekItems = weekItems.filter(item => item.day_offset !== dayOffset);
+        weekItems.push({
+            id: crypto.randomUUID(),
+            day_offset: dayOffset,
+            workout,
+        });
+    }
 
     renderWeekList();
 }
-
 async function publishWeekToWol() {
     errorBox.classList.add("hidden");
     wolResult.classList.add("hidden");
@@ -788,7 +875,7 @@ async function publishWeekToWol() {
         errorBox.classList.remove("hidden");
     } finally {
         publishWolButton.disabled = !weekItems.length;
-        publishWolButton.textContent = "PUBBLICA SU WOL";
+        publishWolButton.textContent = "PUBBLICA SU WORKOUT LINK";
     }
 }
 
@@ -881,6 +968,8 @@ document.getElementById("add-repeat").addEventListener("click", () => addRepeat(
 document.getElementById("generate").addEventListener("click", generateJson);
 document.getElementById("send-intervals").addEventListener("click", sendToIntervals);
 document.getElementById("add-current-to-week").addEventListener("click", addCurrentWorkoutToWeek);
+document.getElementById("new-workout").addEventListener("click", resetWorkoutBuilder);
+document.getElementById("cancel-edit-workout").addEventListener("click", resetWorkoutBuilder);
 document.getElementById("publish-wol").addEventListener("click", publishWeekToWol);
 document.getElementById("copy-wol-link").addEventListener("click", copyWolLink);
 document.getElementById("open-wol-link").addEventListener("click", openWolLink);
