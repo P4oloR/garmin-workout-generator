@@ -249,6 +249,10 @@ def build_workout_from_payload(payload):
 
 
 INTERVALS_BASE_URL = "https://intervals.icu/api/v1"
+WOL_BASE_URL = os.getenv(
+    "WOL_BASE_URL",
+    "https://workoutlink.paolo-ricciotti.workers.dev",
+).rstrip("/")
 
 
 def create_or_update_intervals_workout(api_key, workout, date_str):
@@ -287,6 +291,58 @@ def create_or_update_intervals_workout(api_key, workout, date_str):
         )
 
     return data
+
+
+def serialize_target_snapshot(target):
+    return {
+        "kind": target.kind.value,
+        "min_bpm": target.min_bpm,
+        "max_bpm": target.max_bpm,
+        "zone_number": target.zone_number,
+        "pace_fast_seconds_per_km": target.pace_fast_seconds_per_km,
+        "pace_slow_seconds_per_km": target.pace_slow_seconds_per_km,
+    }
+
+
+def serialize_step_snapshot(step):
+    return {
+        "role": step.role.value,
+        "end_type": step.end_type.value,
+        "value": step.value,
+        "preferred_unit": (
+            step.preferred_unit.value
+            if step.preferred_unit is not None
+            else None
+        ),
+        "target": serialize_target_snapshot(step.target),
+    }
+
+
+def serialize_workout_snapshot(workout):
+    serialized_steps = []
+
+    for item in workout.steps:
+        if isinstance(item, Step):
+            serialized_steps.append(serialize_step_snapshot(item))
+        elif isinstance(item, RepeatBlock):
+            serialized_steps.append(
+                {
+                    "repetitions": item.repetitions,
+                    "steps": [
+                        serialize_step_snapshot(step)
+                        for step in item.steps
+                    ],
+                }
+            )
+        else:
+            raise TypeError(
+                f"Tipo workout non supportato: {type(item)!r}"
+            )
+
+    return {
+        "name": workout.name,
+        "steps": serialized_steps,
+    }
 
 
 def safe_filename(name):
@@ -334,6 +390,105 @@ def generate():
         return {
             "error": str(exc),
         }, 400
+
+
+@app.post("/publish-to-wol")
+def publish_to_wol():
+    try:
+        payload = request.get_json(force=True)
+
+        title = (payload.get("title") or "").strip()
+        if not title:
+            raise ValueError("Inserisci il titolo della settimana.")
+
+        raw_items = payload.get("items")
+        if not isinstance(raw_items, list) or not raw_items:
+            raise ValueError(
+                "Aggiungi almeno un allenamento alla settimana."
+            )
+
+        if len(raw_items) > 7:
+            raise ValueError(
+                "La settimana può contenere al massimo 7 allenamenti."
+            )
+
+        publisher_key = os.getenv("WOL_PUBLISHER_KEY")
+        if not publisher_key:
+            raise ValueError(
+                "Variabile WOL_PUBLISHER_KEY non impostata sul PC."
+            )
+
+        wol_items = []
+        for index, raw_item in enumerate(raw_items):
+            try:
+                day_offset = int(raw_item.get("day_offset"))
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"Allenamento {index + 1}: giorno non valido."
+                ) from exc
+
+            if day_offset < 0 or day_offset > 6:
+                raise ValueError(
+                    f"Allenamento {index + 1}: giorno non valido."
+                )
+
+            raw_workout = raw_item.get("workout")
+            if not isinstance(raw_workout, dict):
+                raise ValueError(
+                    f"Allenamento {index + 1}: dati workout mancanti."
+                )
+
+            workout = build_workout_from_payload(raw_workout)
+            wol_items.append(
+                {
+                    "day_offset": day_offset,
+                    "workout": serialize_workout_snapshot(workout),
+                }
+            )
+
+        response = requests.post(
+            f"{WOL_BASE_URL}/api/publish/plan",
+            headers={
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {publisher_key}",
+                "User-Agent": "WorkOutGenerator/0.1",
+            },
+            json={
+                "title": title,
+                "description": (
+                    (payload.get("description") or "").strip() or None
+                ),
+                "items": wol_items,
+            },
+            timeout=30,
+        )
+
+        if not response.ok:
+            raise RuntimeError(
+                "WorkOutLink ha risposto "
+                f"HTTP {response.status_code}: {response.text}"
+            )
+
+        data = response.json()
+        if not isinstance(data, dict) or not data.get("url"):
+            raise RuntimeError(
+                "Risposta inattesa da WorkOutLink."
+            )
+
+        return {
+            "ok": True,
+            "message": "Settimana pubblicata su WorkOutLink.",
+            "public_id": data.get("public_id"),
+            "url": data["url"],
+        }
+
+    except requests.RequestException as exc:
+        return {"error": f"Errore di rete verso WorkOutLink: {exc}"}, 502
+    except RuntimeError as exc:
+        return {"error": str(exc)}, 502
+    except (ValueError, TypeError, json.JSONDecodeError) as exc:
+        return {"error": str(exc)}, 400
 
 
 @app.post("/send-to-intervals")
