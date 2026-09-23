@@ -750,7 +750,10 @@ function renderPlanPage(plan, items, oauthConfigured) {
   return pageShell(
     escapeHtml(plan.title),
     '<main class="card">' +
-      '<div class="product-brand product-brand-link" aria-label="WORKOUT Link"><div class="brand-symbol link-symbol" aria-hidden="true"><span class="link-a"></span><span class="link-b"></span><span class="link-spark"></span></div><div class="brand-copy"><div class="brand-master">WORKOUT</div><div class="brand-product">Link</div><div class="brand-tagline">SHARE <b>•</b> SCHEDULE <b>•</b> DELIVER</div></div></div>' +
+      '<section class="hero hero-link">' +
+        '<div class="product-brand product-brand-link" aria-label="WORKOUT Link"><div class="brand-symbol link-symbol" aria-hidden="true"><span class="link-a"></span><span class="link-b"></span><span class="link-spark"></span></div><div class="brand-copy"><div class="brand-master">WORKOUT</div><div class="brand-product">Link</div><div class="brand-tagline">SHARE <b>•</b> SCHEDULE <b>•</b> DELIVER</div></div></div>' +
+        '<p class="hero-kicker">One plan. One link. Ready to train.</p>' +
+      '</section>' +
       "<h1>" + escapeHtml(plan.title) + "</h1>" +
       description +
       '<section class="workouts">' +
@@ -783,14 +786,14 @@ function renderPlanPage(plan, items, oauthConfigured) {
 function renderHome() {
   return pageShell(
     "WORKOUT Link",
-    '<main class="card"><div class="product-brand product-brand-link" aria-label="WORKOUT Link"><div class="brand-symbol link-symbol" aria-hidden="true"><span class="link-a"></span><span class="link-b"></span><span class="link-spark"></span></div><div class="brand-copy"><div class="brand-master">WORKOUT</div><div class="brand-product">Link</div><div class="brand-tagline">SHARE <b>•</b> SCHEDULE <b>•</b> DELIVER</div></div></div><h1>Workouts, one link away.</h1><p>PoC single-publisher in costruzione.</p></main>',
+    '<main class="card"><section class="hero hero-link"><div class="product-brand product-brand-link" aria-label="WORKOUT Link"><div class="brand-symbol link-symbol" aria-hidden="true"><span class="link-a"></span><span class="link-b"></span><span class="link-spark"></span></div><div class="brand-copy"><div class="brand-master">WORKOUT</div><div class="brand-product">Link</div><div class="brand-tagline">SHARE <b>•</b> SCHEDULE <b>•</b> DELIVER</div></div></div><p class="hero-kicker">One plan. One link. Ready to train.</p></section><h1>Workouts, one link away.</h1><p>PoC single-publisher in costruzione.</p></main>',
   );
 }
 
 function renderSetupPending() {
   return pageShell(
     "OAuth non ancora disponibile - WORKOUT Link",
-    '<main class="card"><div class="product-brand product-brand-link" aria-label="WORKOUT Link"><div class="brand-symbol link-symbol" aria-hidden="true"><span class="link-a"></span><span class="link-b"></span><span class="link-spark"></span></div><div class="brand-copy"><div class="brand-master">WORKOUT</div><div class="brand-product">Link</div><div class="brand-tagline">SHARE <b>•</b> SCHEDULE <b>•</b> DELIVER</div></div></div><h1>Connessione non ancora disponibile</h1>' +
+    '<main class="card"><section class="hero hero-link"><div class="product-brand product-brand-link" aria-label="WORKOUT Link"><div class="brand-symbol link-symbol" aria-hidden="true"><span class="link-a"></span><span class="link-b"></span><span class="link-spark"></span></div><div class="brand-copy"><div class="brand-master">WORKOUT</div><div class="brand-product">Link</div><div class="brand-tagline">SHARE <b>•</b> SCHEDULE <b>•</b> DELIVER</div></div></div><p class="hero-kicker">One plan. One link. Ready to train.</p></section><h1>Connessione non ancora disponibile</h1>' +
     "<p>L'app OAuth Intervals.icu è ancora in fase di approvazione o non è stata configurata nel Worker.</p>" +
     "</main>",
   );
@@ -802,7 +805,7 @@ function renderOAuthError(error) {
     : "Non è stato possibile completare la connessione a Intervals.icu.";
   return pageShell(
     "OAuth error - WORKOUT Link",
-    '<main class="card"><div class="product-brand product-brand-link" aria-label="WORKOUT Link"><div class="brand-symbol link-symbol" aria-hidden="true"><span class="link-a"></span><span class="link-b"></span><span class="link-spark"></span></div><div class="brand-copy"><div class="brand-master">WORKOUT</div><div class="brand-product">Link</div><div class="brand-tagline">SHARE <b>•</b> SCHEDULE <b>•</b> DELIVER</div></div></div><h1>Connessione Intervals.icu</h1><p>' +
+    '<main class="card"><section class="hero hero-link"><div class="product-brand product-brand-link" aria-label="WORKOUT Link"><div class="brand-symbol link-symbol" aria-hidden="true"><span class="link-a"></span><span class="link-b"></span><span class="link-spark"></span></div><div class="brand-copy"><div class="brand-master">WORKOUT</div><div class="brand-product">Link</div><div class="brand-tagline">SHARE <b>•</b> SCHEDULE <b>•</b> DELIVER</div></div></div><p class="hero-kicker">One plan. One link. Ready to train.</p></section><h1>Connessione Intervals.icu</h1><p>' +
     escapeHtml(message) +
     "</p></main>",
   );
@@ -811,7 +814,7 @@ function renderOAuthError(error) {
 function renderPrivacy() {
   return pageShell(
     "Privacy - WORKOUT Link",
-    '<main class="card"><div class="product-brand product-brand-link" aria-label="WORKOUT Link"><div class="brand-symbol link-symbol" aria-hidden="true"><span class="link-a"></span><span class="link-b"></span><span class="link-spark"></span></div><div class="brand-copy"><div class="brand-master">WORKOUT</div><div class="brand-product">Link</div><div class="brand-tagline">SHARE <b>•</b> SCHEDULE <b>•</b> DELIVER</div></div></div><h1>Privacy</h1>' +
+    '<main class="card"><section class="hero hero-link"><div class="product-brand product-brand-link" aria-label="WORKOUT Link"><div class="brand-symbol link-symbol" aria-hidden="true"><span class="link-a"></span><span class="link-b"></span><span class="link-spark"></span></div><div class="brand-copy"><div class="brand-master">WORKOUT</div><div class="brand-product">Link</div><div class="brand-tagline">SHARE <b>•</b> SCHEDULE <b>•</b> DELIVER</div></div></div><p class="hero-kicker">One plan. One link. Ready to train.</p></section><h1>Privacy</h1>' +
     "<p>WORKOUT Link conserva gli snapshot dei piani pubblicati necessari alla condivisione tramite link.</p>" +
     "<p>I token Intervals.icu sono gestiti lato server, cifrati prima della memorizzazione e non sono esposti nel link pubblico o nel browser. WORKOUT Link non richiede password Garmin o Suunto.</p>" +
     "</main>",
@@ -826,7 +829,11 @@ function pageShell(title, body) {
     "*{box-sizing:border-box}" +
     ":root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#18312B;background:#F6F8F7}" +
     "body{margin:0;background:#F6F8F7;color:#18312B}" +
-    ".card{width:min(980px,calc(100% - 32px));margin:0 auto;padding:36px 0 56px}" +
+    ".card{width:min(980px,calc(100% - 32px));margin:0 auto;padding:28px 0 56px}" +
+    ".hero{padding:26px 28px 24px;border-radius:18px;background:linear-gradient(135deg,#00796B 0%,#00695C 100%);color:#fff;box-shadow:0 10px 28px rgba(0,105,92,.12)}" +
+    ".hero .product-brand{margin-bottom:0}.hero .brand-master{color:#fff}.hero .brand-product{color:#FBC02D}.hero .brand-tagline{color:rgba(255,255,255,.78)}.hero .brand-tagline b{color:#FBC02D}" +
+    ".hero .link-a{border-color:#DDF5E7}.hero .link-b{border-color:#FBC02D}.hero .link-spark{background:#FBC02D}" +
+    ".hero-kicker{margin:20px 0 0;color:rgba(255,255,255,.9);font-size:1rem;font-weight:650;letter-spacing:.01em}" +
     " .product-brand{display:flex;align-items:flex-end;gap:14px;margin-bottom:26px}.brand-copy{display:grid;line-height:.9}.brand-master{font-size:clamp(34px,5vw,58px);font-weight:950;letter-spacing:-.055em;color:#0A4A42}.brand-product{margin-top:5px;font-size:clamp(25px,3.5vw,42px);font-weight:750;letter-spacing:-.04em;color:#F2B323}.brand-tagline{margin-top:14px;font-size:10px;font-weight:800;letter-spacing:.2em;color:#60736E}.brand-tagline b{color:#F2B323}.brand-symbol{flex:0 0 auto}.link-symbol{position:relative;width:66px;height:58px}.link-a,.link-b{position:absolute;width:34px;height:18px;border:8px solid;border-radius:14px;transform:rotate(-38deg)}.link-a{left:2px;bottom:6px;border-color:#0A4A42}.link-b{left:24px;top:4px;border-color:#F2B323}.link-spark{position:absolute;right:0;top:5px;width:7px;height:22px;background:#F2B323;border-radius:8px;transform:rotate(38deg)}" +
     "h1{margin:18px 0 8px;font-size:clamp(2.2rem,6vw,4.4rem);line-height:.98;color:#173C35}" +
     ".description,.note{color:#697386}" +
@@ -847,7 +854,7 @@ function pageShell(title, body) {
     "details{margin-top:22px;padding:18px 20px;border:1px solid #D7E2DF;border-radius:14px;background:#fff}" +
     "summary{cursor:pointer;font-weight:800;color:#173C35}" +
     "details p{color:#61736F;line-height:1.55}" +
-    "@media (max-width:620px){.card{width:min(100% - 20px,980px);padding-top:20px}.delivery{padding:18px}.buttons{flex-direction:column}.buttons button{width:100%}.product-brand{align-items:center}.link-symbol{width:52px;height:46px}.link-a,.link-b{width:28px;height:15px;border-width:7px}.brand-tagline{font-size:9px;letter-spacing:.12em}}" +
+    "@media (max-width:620px){.card{width:min(100% - 20px,980px);padding-top:14px}.hero{padding:20px 18px}.delivery{padding:18px}.buttons{flex-direction:column}.buttons button{width:100%}.product-brand{align-items:center}.link-symbol{width:52px;height:46px}.link-a,.link-b{width:28px;height:15px;border-width:7px}.brand-tagline{font-size:9px;letter-spacing:.12em}.hero-kicker{font-size:.92rem}}" +
     "</style></head><body>" +
     body +
     "</body></html>";
