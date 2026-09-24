@@ -95,6 +95,18 @@
             <span class="preview-label">WORKOUT Link</span>
         </div>
 
+        <div class="creator-connect">
+            <div>
+                <strong id="creator-status">WORKOUT Link non collegato</strong>
+                <span id="creator-status-note">Collega questo Generator una sola volta per pubblicare.</span>
+            </div>
+            <div class="creator-connect-actions">
+                <input id="creator-name" type="text" placeholder="Nome creator" maxlength="80">
+                <button id="connect-wol" class="secondary" type="button">COLLEGA WORKOUT LINK</button>
+                <button id="disconnect-wol" class="secondary hidden" type="button">SCOLLEGA</button>
+            </div>
+        </div>
+
         <div class="week-meta">
             <label class="field">
                 <span>Titolo settimana</span>
@@ -210,6 +222,11 @@ const weekList = document.getElementById("week-list");
 const publishWolButton = document.getElementById("publish-wol");
 const wolResult = document.getElementById("wol-result");
 const wolUrl = document.getElementById("wol-url");
+const creatorStatus = document.getElementById("creator-status");
+const creatorStatusNote = document.getElementById("creator-status-note");
+const creatorNameInput = document.getElementById("creator-name");
+const connectWolButton = document.getElementById("connect-wol");
+const disconnectWolButton = document.getElementById("disconnect-wol");
 let weekItems = [];
 let editingWeekItemId = null;
 
@@ -844,6 +861,111 @@ function addCurrentWorkoutToWeek() {
         document.getElementById("week-day").value = String(nextFreeWeekDay());
     }
 }
+async function refreshCreatorStatus() {
+    try {
+        const response = await fetch("/wol-creator/status");
+        const data = await response.json();
+        const connected = Boolean(data.connected);
+        creatorStatus.textContent = connected
+            ? "Collegato come " + (data.creator_name || "Creator")
+            : "WORKOUT Link non collegato";
+        creatorStatusNote.textContent = connected
+            ? "Questo Generator può pubblicare settimane su WORKOUT Link."
+            : "Collega questo Generator una sola volta per pubblicare.";
+        creatorNameInput.classList.toggle("hidden", connected);
+        connectWolButton.classList.toggle("hidden", connected);
+        disconnectWolButton.classList.toggle("hidden", !connected);
+    } catch {
+        creatorStatus.textContent = "Stato WORKOUT Link non disponibile";
+        creatorStatusNote.textContent = "Riprova tra poco.";
+    }
+}
+
+function waitForCreatorPairing(pairingId) {
+    const startedAt = Date.now();
+    const timer = setInterval(async () => {
+        if (Date.now() - startedAt > 15 * 60 * 1000) {
+            clearInterval(timer);
+            creatorStatus.textContent = "Associazione scaduta";
+            creatorStatusNote.textContent = "Avvia una nuova associazione.";
+            connectWolButton.disabled = false;
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                "/wol-creator/pair/status?pairing_id=" + encodeURIComponent(pairingId)
+            );
+            const data = await response.json();
+
+            if (response.ok && data.status === "approved") {
+                clearInterval(timer);
+                connectWolButton.disabled = false;
+                await refreshCreatorStatus();
+                return;
+            }
+
+            if (response.ok && data.status === "pending") {
+                return;
+            }
+
+            clearInterval(timer);
+            connectWolButton.disabled = false;
+            creatorStatus.textContent = "Associazione non riuscita";
+            creatorStatusNote.textContent = data.error || "Riprova.";
+        } catch {
+            // Keep polling through transient network errors.
+        }
+    }, 2000);
+}
+
+async function connectWorkoutLink() {
+    const displayName = creatorNameInput.value.trim();
+    if (!displayName) {
+        errorBox.textContent = "Inserisci il nome del creator.";
+        errorBox.classList.remove("hidden");
+        creatorNameInput.focus();
+        return;
+    }
+
+    errorBox.classList.add("hidden");
+    connectWolButton.disabled = true;
+    creatorStatus.textContent = "Associazione in corso…";
+    creatorStatusNote.textContent = "Conferma l'autorizzazione nella scheda WORKOUT Link.";
+
+    const popup = window.open("", "_blank");
+    try {
+        const response = await fetch("/wol-creator/pair/start", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({display_name: displayName}),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.pairing_id || !data.approve_url) {
+            throw new Error(data.error || "Impossibile avviare l'associazione.");
+        }
+
+        if (popup) {
+            popup.location = data.approve_url;
+        } else {
+            window.open(data.approve_url, "_blank", "noopener,noreferrer");
+        }
+        waitForCreatorPairing(data.pairing_id);
+    } catch (error) {
+        if (popup) popup.close();
+        connectWolButton.disabled = false;
+        creatorStatus.textContent = "WORKOUT Link non collegato";
+        creatorStatusNote.textContent = "Collega questo Generator una sola volta per pubblicare.";
+        errorBox.textContent = error.message;
+        errorBox.classList.remove("hidden");
+    }
+}
+
+async function disconnectWorkoutLink() {
+    await fetch("/wol-creator/disconnect", {method: "POST"});
+    await refreshCreatorStatus();
+}
+
 async function publishWeekToWol() {
     errorBox.classList.add("hidden");
     wolResult.classList.add("hidden");
@@ -989,8 +1111,11 @@ document.getElementById("cancel-edit-workout").addEventListener("click", resetWo
 document.getElementById("publish-wol").addEventListener("click", publishWeekToWol);
 document.getElementById("copy-wol-link").addEventListener("click", copyWolLink);
 document.getElementById("open-wol-link").addEventListener("click", openWolLink);
+connectWolButton.addEventListener("click", connectWorkoutLink);
+disconnectWolButton.addEventListener("click", disconnectWorkoutLink);
 document.getElementById("workout-name").addEventListener("input", refreshUI);
 
+refreshCreatorStatus();
 addStep({role: "warmup", end_type: "distance", value: 2.5, unit: "km", target: "none"});
 addRepeat({
     repetitions: 6,
