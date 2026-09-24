@@ -1,13 +1,35 @@
 PRAGMA foreign_keys = ON;
 
+CREATE TABLE IF NOT EXISTS creators (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    display_name TEXT NOT NULL,
+    token_hash TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL,
+    revoked_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS creator_pairings (
+    pairing_id TEXT PRIMARY KEY,
+    display_name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    token_encrypted TEXT,
+    creator_id INTEGER,
+    created_at TEXT NOT NULL,
+    approved_at TEXT,
+    consumed_at TEXT,
+    FOREIGN KEY(creator_id) REFERENCES creators(id) ON DELETE SET NULL
+);
+
 CREATE TABLE IF NOT EXISTS public_plans (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    creator_id INTEGER,
     public_id TEXT NOT NULL UNIQUE,
     title TEXT NOT NULL,
     description TEXT,
     status TEXT NOT NULL DEFAULT 'published',
     version INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    FOREIGN KEY(creator_id) REFERENCES creators(id) ON DELETE SET NULL
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_public_plans_public_id
