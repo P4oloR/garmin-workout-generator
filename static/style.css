@@ -614,3 +614,97 @@ select:focus {
         flex-direction: column;
     }
 }
+
+
+/* WOG dashboard v2: builder + sticky weekly planner */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(300px, .8fr);
+    gap: 22px;
+    align-items: start;
+}
+
+.builder-column {
+    min-width: 0;
+}
+
+.week-sidebar {
+    position: sticky;
+    top: 18px;
+}
+
+.week-card {
+    margin-bottom: 0;
+}
+
+.week-meta {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.week-list {
+    margin-top: 18px;
+}
+
+.workout-header-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 220px;
+}
+
+.workout-header-actions .primary-button,
+.workout-header-actions .secondary {
+    width: 100%;
+    white-space: nowrap;
+}
+
+.name-card-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.week-sidebar .section-heading {
+    align-items: flex-start;
+}
+
+.week-sidebar .week-actions {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.week-sidebar .week-actions .primary-button,
+.week-sidebar .week-actions .secondary {
+    width: 100%;
+}
+
+@media (max-width: 1050px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .week-sidebar {
+        position: static;
+    }
+
+    .name-card-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .workout-header-actions {
+        min-width: 0;
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 620px) {
+    .name-card-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .workout-header-actions {
+        flex-direction: column;
+    }
+}
