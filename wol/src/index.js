@@ -21,6 +21,10 @@ export default {
       return creatorPairStart(request, env);
     }
 
+    if (request.method === "POST" && url.pathname === "/api/creator/revoke") {
+      return creatorRevoke(request, env);
+    }
+
     if (request.method === "GET" && url.pathname === "/api/creator/pair/status") {
       return creatorPairStatus(request, env);
     }
@@ -152,6 +156,20 @@ async function publishPlan(request, env) {
     console.error("publishPlan failed", error);
     return jsonResponse({ error: "storage_error" }, 500);
   }
+}
+
+async function creatorRevoke(request, env) {
+  const token = readBearerToken(request);
+  if (!token) return jsonResponse({ error: "unauthorized" }, 401);
+
+  const tokenHash = await sha256Hex(token);
+  const now = new Date().toISOString();
+  const result = await env.DB.prepare(
+    "UPDATE creators SET revoked_at = ? WHERE token_hash = ? AND revoked_at IS NULL"
+  ).bind(now, tokenHash).run();
+
+  if (!result.success) return jsonResponse({ error: "storage_error" }, 500);
+  return jsonResponse({ ok: true });
 }
 
 async function creatorPairStart(request, env) {
