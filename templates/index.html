@@ -26,6 +26,8 @@
         <p class="subtitle hero-description">Crea gli allenamenti, componi la settimana e pubblicala su WORKOUT Link.</p>
     </header>
 
+    <div class="dashboard-grid">
+    <div class="builder-column">
     <section class="card name-card">
         <div class="name-card-header">
             <div class="step-grid name-card-grid">
@@ -35,12 +37,28 @@
                     <small class="field-error"></small>
                 </label>
                 <label class="field">
+                    <span>Giorno settimana</span>
+                    <select id="week-day">
+                        <option value="0">Lunedì</option>
+                        <option value="1">Martedì</option>
+                        <option value="2">Mercoledì</option>
+                        <option value="3">Giovedì</option>
+                        <option value="4">Venerdì</option>
+                        <option value="5">Sabato</option>
+                        <option value="6">Domenica</option>
+                    </select>
+                    <small class="field-error"></small>
+                </label>
+                <label class="field">
                     <span>Data Intervals.icu</span>
                     <input id="workout-date" type="date">
                     <small class="field-error"></small>
                 </label>
             </div>
-            <button id="new-workout" class="secondary new-workout-button" type="button">+ NUOVO WORKOUT</button>
+            <div class="workout-header-actions">
+                <button id="add-current-to-week" class="primary-button" type="button">+ AGGIUNGI ALLA SETTIMANA</button>
+                <button id="new-workout" class="secondary new-workout-button" type="button">+ NUOVO WORKOUT</button>
+            </div>
         </div>
         <div id="editing-banner" class="editing-banner hidden">
             <span>Stai modificando un allenamento già inserito nella settimana.</span>
@@ -66,6 +84,8 @@
         <div id="preview" class="human-preview"></div>
     </section>
 
+    </div>
+    <aside class="week-sidebar">
     <section class="card week-card">
         <div class="section-heading">
             <div>
@@ -75,7 +95,7 @@
             <span class="preview-label">WORKOUT Link</span>
         </div>
 
-        <div class="week-meta step-grid">
+        <div class="week-meta">
             <label class="field">
                 <span>Titolo settimana</span>
                 <input id="week-title" type="text" value="Settimana di allenamento">
@@ -86,24 +106,6 @@
                 <input id="week-description" type="text" placeholder="Opzionale">
                 <small class="field-error"></small>
             </label>
-            <label class="field">
-                <span>Giorno</span>
-                <select id="week-day">
-                    <option value="0">Lunedì</option>
-                    <option value="1">Martedì</option>
-                    <option value="2">Mercoledì</option>
-                    <option value="3">Giovedì</option>
-                    <option value="4">Venerdì</option>
-                    <option value="5">Sabato</option>
-                    <option value="6">Domenica</option>
-                </select>
-                <small class="field-error"></small>
-            </label>
-            <div class="field week-add-field">
-                <span>Allenamento corrente</span>
-                <button id="add-current-to-week" class="secondary" type="button">+ AGGIUNGI ALLA SETTIMANA</button>
-                <small class="field-error"></small>
-            </div>
         </div>
 
         <div id="week-list" class="week-list"></div>
@@ -121,6 +123,8 @@
             <button id="publish-wol" class="primary-button" type="button">PUBBLICA SU WORKOUT LINK</button>
         </div>
     </section>
+    </aside>
+    </div>
 
     <div id="error" class="error-box hidden"></div>
 
@@ -779,11 +783,20 @@ function editWeekWorkout(itemId) {
     window.scrollTo({top: 0, behavior: "smooth"});
 }
 
+function nextFreeWeekDay() {
+    const used = new Set(weekItems.map(item => item.day_offset));
+    for (let day = 0; day < 7; day += 1) {
+        if (!used.has(day)) return day;
+    }
+    return 0;
+}
+
 function resetWorkoutBuilder() {
     editingWeekItemId = null;
     builder.innerHTML = "";
     document.getElementById("workout-name").value = "Nuovo allenamento";
     document.getElementById("workout-date").value = "";
+    document.getElementById("week-day").value = String(nextFreeWeekDay());
     addStep({role: "run", end_type: "distance", value: 1, unit: "km", target: "none"});
     document.getElementById("editing-banner").classList.add("hidden");
     document.getElementById("add-current-to-week").textContent = "+ AGGIUNGI ALLA SETTIMANA";
@@ -827,6 +840,9 @@ function addCurrentWorkoutToWeek() {
     }
 
     renderWeekList();
+    if (!editingWeekItemId) {
+        document.getElementById("week-day").value = String(nextFreeWeekDay());
+    }
 }
 async function publishWeekToWol() {
     errorBox.classList.add("hidden");
