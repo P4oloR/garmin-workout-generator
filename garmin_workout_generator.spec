@@ -1,3 +1,5 @@
+from PyInstaller.utils.hooks import collect_submodules
+
 # -*- mode: python ; coding: utf-8 -*-
 
 a = Analysis(
@@ -8,7 +10,7 @@ a = Analysis(
         ("templates", "templates"),
         ("static", "static"),
     ],
-    hiddenimports=[],
+    hiddenimports=collect_submodules("keyring.backends"),
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
