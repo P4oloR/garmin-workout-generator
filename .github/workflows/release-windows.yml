@@ -71,10 +71,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-15
+          - runner: macos-15-intel
             artifact: WORKOUT-Generator-macOS-Intel
             archive: WORKOUT-Generator-macOS-Intel.zip
-          - runner: macos-15-arm64
+          - runner: macos-15
             artifact: WORKOUT-Generator-macOS-Apple-Silicon
             archive: WORKOUT-Generator-macOS-Apple-Silicon.zip
     runs-on: ${{ matrix.runner }}
