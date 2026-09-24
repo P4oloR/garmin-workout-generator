@@ -17,6 +17,20 @@ export default {
       return publishPlan(request, env);
     }
 
+    if (request.method === "POST" && url.pathname === "/api/creator/pair/start") {
+      return creatorPairStart(request, env);
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/creator/pair/status") {
+      return creatorPairStatus(request, env);
+    }
+
+    if (url.pathname.startsWith("/creator/pair/")) {
+      const pairingId = decodeURIComponent(url.pathname.slice("/creator/pair/".length));
+      if (request.method === "GET") return creatorPairPage(pairingId, env);
+      if (request.method === "POST") return creatorPairApprove(request, pairingId, env);
+    }
+
     if (request.method === "GET" && url.pathname.startsWith("/p/")) {
       return showPublicPlan(request, decodeURIComponent(url.pathname.slice(3)), env);
     }
@@ -46,13 +60,23 @@ export default {
 };
 
 async function publishPlan(request, env) {
-  if (!env.WOL_PUBLISHER_KEY) {
-    return jsonResponse({ error: "publisher_not_configured" }, 503);
+  const suppliedKey = readBearerToken(request);
+  if (!suppliedKey) {
+    return jsonResponse({ error: "unauthorized" }, 401);
   }
 
-  const suppliedKey = readBearerToken(request);
-  if (!suppliedKey || !safeEqual(suppliedKey, env.WOL_PUBLISHER_KEY)) {
-    return jsonResponse({ error: "unauthorized" }, 401);
+  let creatorId = null;
+  if (env.WOL_PUBLISHER_KEY && safeEqual(suppliedKey, env.WOL_PUBLISHER_KEY)) {
+    creatorId = null;
+  } else {
+    const tokenHash = await sha256Hex(suppliedKey);
+    const creator = await env.DB.prepare(
+      "SELECT id FROM creators WHERE token_hash = ? AND revoked_at IS NULL"
+    ).bind(tokenHash).first();
+    if (!creator?.id) {
+      return jsonResponse({ error: "unauthorized" }, 401);
+    }
+    creatorId = creator.id;
   }
 
   let payload;
@@ -75,9 +99,10 @@ async function publishPlan(request, env) {
 
   try {
     const insertPlan = await env.DB.prepare(
-      "INSERT INTO public_plans (public_id, title, description, status, version, created_at) VALUES (?, ?, ?, 'published', 1, ?)",
+      "INSERT INTO public_plans (creator_id, public_id, title, description, status, version, created_at) VALUES (?, ?, ?, ?, 'published', 1, ?)",
     )
       .bind(
+        creatorId,
         publicId,
         payload.title.trim(),
         normalizeOptionalText(payload.description),
@@ -127,6 +152,129 @@ async function publishPlan(request, env) {
     console.error("publishPlan failed", error);
     return jsonResponse({ error: "storage_error" }, 500);
   }
+}
+
+async function creatorPairStart(request, env) {
+  if (!env.SESSION_SECRET) {
+    return jsonResponse({ error: "pairing_not_configured" }, 503);
+  }
+
+  let payload = {};
+  try {
+    payload = await request.json();
+  } catch {
+    return jsonResponse({ error: "invalid_json" }, 400);
+  }
+
+  const displayName = typeof payload.display_name === "string"
+    ? payload.display_name.trim()
+    : "";
+  if (!displayName || displayName.length > 80) {
+    return jsonResponse({ error: "invalid_display_name" }, 400);
+  }
+
+  const pairingId = randomToken(24);
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    "INSERT INTO creator_pairings (pairing_id, display_name, status, created_at) VALUES (?, ?, 'pending', ?)"
+  ).bind(pairingId, displayName, now).run();
+
+  return jsonResponse({
+    pairing_id: pairingId,
+    approve_url: new URL("/creator/pair/" + encodeURIComponent(pairingId), request.url).toString(),
+  }, 201);
+}
+
+async function creatorPairPage(pairingId, env) {
+  const pairing = await getValidPairing(pairingId, env);
+  if (!pairing) return htmlResponse(renderPairingExpired(), 404);
+
+  if (pairing.status === "approved" || pairing.status === "consumed") {
+    return htmlResponse(renderPairingApproved(pairing.display_name));
+  }
+
+  return htmlResponse(renderPairingConfirm(pairing));
+}
+
+async function creatorPairApprove(request, pairingId, env) {
+  if (!env.SESSION_SECRET) {
+    return htmlResponse(renderPairingExpired(), 503);
+  }
+
+  const pairing = await getValidPairing(pairingId, env);
+  if (!pairing) return htmlResponse(renderPairingExpired(), 404);
+  if (pairing.status !== "pending") {
+    return htmlResponse(renderPairingApproved(pairing.display_name));
+  }
+
+  const token = "wlc_" + randomToken(32);
+  const tokenHash = await sha256Hex(token);
+  const encryptedToken = await encryptSecret(token, env.SESSION_SECRET);
+  const now = new Date().toISOString();
+
+  const creatorInsert = await env.DB.prepare(
+    "INSERT INTO creators (display_name, token_hash, created_at) VALUES (?, ?, ?)"
+  ).bind(pairing.display_name, tokenHash, now).run();
+
+  const creatorId = creatorInsert.meta?.last_row_id;
+  if (!creatorId) {
+    return htmlResponse(renderOAuthError("creator_creation_failed"), 500);
+  }
+
+  await env.DB.prepare(
+    "UPDATE creator_pairings SET status = 'approved', token_encrypted = ?, creator_id = ?, approved_at = ? WHERE pairing_id = ?"
+  ).bind(encryptedToken, creatorId, now, pairingId).run();
+
+  return htmlResponse(renderPairingApproved(pairing.display_name));
+}
+
+async function creatorPairStatus(request, env) {
+  if (!env.SESSION_SECRET) {
+    return jsonResponse({ error: "pairing_not_configured" }, 503);
+  }
+
+  const url = new URL(request.url);
+  const pairingId = url.searchParams.get("pairing_id") || "";
+  const pairing = await getValidPairing(pairingId, env);
+  if (!pairing) return jsonResponse({ error: "pairing_not_found" }, 404);
+
+  if (pairing.status === "pending") {
+    return jsonResponse({ status: "pending" });
+  }
+
+  if (pairing.status === "consumed") {
+    return jsonResponse({ status: "consumed" }, 410);
+  }
+
+  if (pairing.status !== "approved" || !pairing.token_encrypted) {
+    return jsonResponse({ error: "pairing_invalid" }, 400);
+  }
+
+  const token = await decryptSecret(pairing.token_encrypted, env.SESSION_SECRET);
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    "UPDATE creator_pairings SET status = 'consumed', token_encrypted = NULL, consumed_at = ? WHERE pairing_id = ?"
+  ).bind(now, pairingId).run();
+
+  return jsonResponse({
+    status: "approved",
+    creator_name: pairing.display_name,
+    token,
+  });
+}
+
+async function getValidPairing(pairingId, env) {
+  if (!pairingId || pairingId.length > 128) return null;
+  const pairing = await env.DB.prepare(
+    "SELECT pairing_id, display_name, status, token_encrypted, creator_id, created_at FROM creator_pairings WHERE pairing_id = ?"
+  ).bind(pairingId).first();
+  if (!pairing) return null;
+
+  const ageMs = Date.now() - Date.parse(pairing.created_at);
+  if (!Number.isFinite(ageMs) || ageMs < 0 || ageMs > 15 * 60 * 1000) {
+    return null;
+  }
+  return pairing;
 }
 
 async function showPublicPlan(request, publicId, env) {
@@ -694,6 +842,11 @@ function readBearerToken(request) {
   return match ? match[1] : null;
 }
 
+async function sha256Hex(value) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
 function safeEqual(a, b) {
   const encoder = new TextEncoder();
   const left = encoder.encode(a);
@@ -844,6 +997,34 @@ function renderOAuthError(error) {
     '<main class="card"><section class="hero hero-link"><div class="product-brand product-brand-link" aria-label="WORKOUT Link"><div class="brand-symbol link-symbol" aria-hidden="true"><span class="link-a"></span><span class="link-b"></span><span class="link-spark"></span></div><div class="brand-copy"><div class="brand-master">WORKOUT</div><div class="brand-product">Link</div><div class="brand-tagline">SHARE <b>•</b> SCHEDULE <b>•</b> DELIVER</div></div></div><p class="hero-kicker">One plan. One link. Ready to train.</p></section><h1>Connessione Intervals.icu</h1><p>' +
     escapeHtml(message) +
     "</p></main>",
+  );
+}
+
+function renderPairingConfirm(pairing) {
+  return pageShell(
+    "Collega WORKOUT Generator",
+    '<main class="card"><section class="hero hero-link"><div class="product-brand product-brand-link"><div class="brand-copy"><div class="brand-master">WORKOUT</div><div class="brand-product">Link</div></div></div></section>' +
+    '<h1>Collega WORKOUT Generator</h1>' +
+    '<p>Stai autorizzando questo dispositivo a pubblicare piani come creator <strong>' + escapeHtml(pairing.display_name) + '</strong>.</p>' +
+    '<form method="post"><button type="submit">AUTORIZZA QUESTO GENERATOR</button></form>' +
+    '<p class="note">Questa associazione vale solo per il dispositivo che ha aperto questa richiesta.</p></main>'
+  );
+}
+
+function renderPairingApproved(displayName) {
+  return pageShell(
+    "WORKOUT Generator collegato",
+    '<main class="card"><section class="hero hero-link"><div class="product-brand product-brand-link"><div class="brand-copy"><div class="brand-master">WORKOUT</div><div class="brand-product">Link</div></div></div></section>' +
+    '<h1>Generator collegato</h1>' +
+    '<p><strong>' + escapeHtml(displayName) + '</strong> può ora pubblicare su WORKOUT Link.</p>' +
+    '<p>Puoi chiudere questa scheda e tornare a WORKOUT Generator.</p></main>'
+  );
+}
+
+function renderPairingExpired() {
+  return pageShell(
+    "Richiesta scaduta",
+    '<main class="card"><h1>Richiesta non disponibile</h1><p>Il collegamento è scaduto o non è valido. Avvia una nuova associazione da WORKOUT Generator.</p></main>'
   );
 }
 
