@@ -6,6 +6,7 @@ import sys
 
 from flask import Flask, render_template, request, send_file, send_from_directory
 import requests
+import keyring
 
 from garmin_builder import build_garmin_workout, count_required_step_ids
 from intervals_builder import build_intervals_workout
@@ -254,6 +255,39 @@ WOL_BASE_URL = os.getenv(
     "https://workoutlink.paolo-ricciotti.workers.dev",
 ).rstrip("/")
 
+KEYRING_SERVICE = "WORKOUT Generator"
+KEYRING_CREATOR_TOKEN = "wol_creator_token"
+KEYRING_CREATOR_NAME = "wol_creator_name"
+
+
+def get_wol_creator_token():
+    try:
+        token = keyring.get_password(KEYRING_SERVICE, KEYRING_CREATOR_TOKEN)
+    except Exception:
+        token = None
+    return token.strip() if token else None
+
+
+def get_wol_creator_name():
+    try:
+        name = keyring.get_password(KEYRING_SERVICE, KEYRING_CREATOR_NAME)
+    except Exception:
+        name = None
+    return name.strip() if name else None
+
+
+def save_wol_creator_credentials(token, creator_name):
+    keyring.set_password(KEYRING_SERVICE, KEYRING_CREATOR_TOKEN, token)
+    keyring.set_password(KEYRING_SERVICE, KEYRING_CREATOR_NAME, creator_name)
+
+
+def clear_wol_creator_credentials():
+    for username in (KEYRING_CREATOR_TOKEN, KEYRING_CREATOR_NAME):
+        try:
+            keyring.delete_password(KEYRING_SERVICE, username)
+        except Exception:
+            pass
+
 
 def get_wol_publisher_key():
     key = os.getenv("WOL_PUBLISHER_KEY")
@@ -414,6 +448,89 @@ def generate():
         }, 400
 
 
+@app.get("/wol-creator/status")
+def wol_creator_status():
+    token = get_wol_creator_token()
+    return {
+        "connected": bool(token),
+        "creator_name": get_wol_creator_name() if token else None,
+    }
+
+
+@app.post("/wol-creator/pair/start")
+def wol_creator_pair_start():
+    try:
+        payload = request.get_json(force=True)
+        display_name = (payload.get("display_name") or "").strip()
+        if not display_name:
+            raise ValueError("Inserisci il nome del creator.")
+
+        response = requests.post(
+            f"{WOL_BASE_URL}/api/creator/pair/start",
+            headers={
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "User-Agent": "WORKOUTGenerator/0.1",
+            },
+            json={"display_name": display_name},
+            timeout=30,
+        )
+        if not response.ok:
+            raise RuntimeError(
+                f"WORKOUT Link ha risposto HTTP {response.status_code}: {response.text}"
+            )
+        data = response.json()
+        return {
+            "pairing_id": data.get("pairing_id"),
+            "approve_url": data.get("approve_url"),
+        }
+    except requests.RequestException as exc:
+        return {"error": f"Errore di rete verso WORKOUT Link: {exc}"}, 502
+    except RuntimeError as exc:
+        return {"error": str(exc)}, 502
+    except (ValueError, TypeError, json.JSONDecodeError) as exc:
+        return {"error": str(exc)}, 400
+
+
+@app.get("/wol-creator/pair/status")
+def wol_creator_pair_status():
+    pairing_id = (request.args.get("pairing_id") or "").strip()
+    if not pairing_id:
+        return {"error": "pairing_id mancante."}, 400
+
+    try:
+        response = requests.get(
+            f"{WOL_BASE_URL}/api/creator/pair/status",
+            params={"pairing_id": pairing_id},
+            headers={"Accept": "application/json", "User-Agent": "WORKOUTGenerator/0.1"},
+            timeout=30,
+        )
+        data = response.json()
+        if response.status_code == 200 and data.get("status") == "approved":
+            token = data.get("token")
+            creator_name = data.get("creator_name") or "Creator"
+            if not token:
+                raise RuntimeError("WORKOUT Link non ha restituito il token creator.")
+            save_wol_creator_credentials(token, creator_name)
+            return {
+                "status": "approved",
+                "creator_name": creator_name,
+            }
+        if response.status_code == 200:
+            return data
+        return data, response.status_code
+    except requests.RequestException as exc:
+        return {"error": f"Errore di rete verso WORKOUT Link: {exc}"}, 502
+    except (ValueError, RuntimeError) as exc:
+        return {"error": str(exc)}, 502
+
+
+@app.post("/wol-creator/disconnect")
+def wol_creator_disconnect():
+    clear_wol_creator_credentials()
+    return {"ok": True}
+
+
 @app.post("/publish-to-wol")
 def publish_to_wol():
     try:
@@ -434,10 +551,10 @@ def publish_to_wol():
                 "La settimana può contenere al massimo 7 allenamenti."
             )
 
-        publisher_key = get_wol_publisher_key()
+        publisher_key = get_wol_creator_token() or get_wol_publisher_key()
         if not publisher_key:
             raise ValueError(
-                "Variabile WOL_PUBLISHER_KEY non impostata sul PC."
+                "WORKOUT Generator non è collegato a WORKOUT Link."
             )
 
         wol_items = []
