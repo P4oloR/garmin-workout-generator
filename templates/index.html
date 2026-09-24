@@ -3,99 +3,210 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Garmin Standalone Workout Generator</title>
+    <title>WORKOUT Generator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 <main class="page">
     <header class="hero">
-        <div>
-            <p class="eyebrow">GARMIN STANDALONE WORKOUT GENERATOR</p>
-            <h1>Workout builder</h1>
-            <p class="subtitle">
-                Costruisci l'allenamento aggiungendo step singoli e blocchi di ripetute.
-            </p>
+        <div class="product-brand product-brand-generator" aria-label="WORKOUT Generator">
+            <div class="brand-symbol generator-symbol" aria-hidden="true">
+                <span></span><span></span><span></span>
+            </div>
+            <div class="brand-copy">
+                <div class="brand-master">WORKOUT</div>
+                <div class="brand-product">Generator</div>
+                <div class="brand-tagline">CREATE <b>•</b> BUILD <b>•</b> PUBLISH</div>
+            </div>
         </div>
-        <span class="status">MVP</span>
+        <div class="hero-status">
+            <span class="status">MVP</span>
+            <span id="validation-status" class="validation-status valid">✓ Workout valido</span>
+        </div>
+        <p class="subtitle hero-description">Crea gli allenamenti, componi la settimana e pubblicala su WORKOUT Link.</p>
     </header>
 
-    <section class="card">
-        <label class="field">
-            <span>Nome allenamento</span>
-            <input id="workout-name" type="text" value="Allenamento Garmin">
-        </label>
+    <div class="dashboard-grid">
+    <div class="builder-column">
+    <section class="card name-card">
+        <div class="name-card-header">
+            <div class="step-grid name-card-grid">
+                <label class="field">
+                    <span>Nome allenamento</span>
+                    <input id="workout-name" type="text" value="Allenamento Garmin">
+                    <small class="field-error"></small>
+                </label>
+                <label class="field">
+                    <span>Giorno settimana</span>
+                    <select id="week-day">
+                        <option value="0">Lunedì</option>
+                        <option value="1">Martedì</option>
+                        <option value="2">Mercoledì</option>
+                        <option value="3">Giovedì</option>
+                        <option value="4">Venerdì</option>
+                        <option value="5">Sabato</option>
+                        <option value="6">Domenica</option>
+                    </select>
+                    <small class="field-error"></small>
+                </label>
+                <label class="field">
+                    <span>Data Intervals.icu</span>
+                    <input id="workout-date" type="date">
+                    <small class="field-error"></small>
+                </label>
+            </div>
+            <div class="workout-header-actions">
+                <button id="add-current-to-week" class="primary-button" type="button">+ AGGIUNGI ALLA SETTIMANA</button>
+                <button id="new-workout" class="secondary new-workout-button" type="button">+ NUOVO WORKOUT</button>
+            </div>
+        </div>
+        <div id="editing-banner" class="editing-banner hidden">
+            <span>Stai modificando un allenamento già inserito nella settimana.</span>
+            <button id="cancel-edit-workout" type="button">ANNULLA MODIFICA</button>
+        </div>
     </section>
 
     <section id="builder" class="builder"></section>
 
-    <div class="add-row">
+    <div class="add-row sticky-add-row">
         <button class="secondary" id="add-step" type="button">+ AGGIUNGI STEP</button>
         <button class="secondary" id="add-repeat" type="button">+ AGGIUNGI RIPETUTE</button>
     </div>
 
     <section class="card preview-card">
         <div class="section-heading">
-            <h2>Anteprima</h2>
-            <span class="preview-label">struttura interna</span>
+            <div>
+                <h2>Anteprima allenamento</h2>
+                <p class="section-note">Riepilogo leggibile prima della generazione.</p>
+            </div>
+            <span class="preview-label">anteprima</span>
         </div>
-        <pre id="preview"></pre>
+        <div id="preview" class="human-preview"></div>
     </section>
+
+    </div>
+    <aside class="week-sidebar">
+    <section class="card week-card">
+        <div class="section-heading">
+            <div>
+                <h2>Settimana WORKOUT Link</h2>
+                <p class="section-note">Aggiungi l'allenamento corrente a un giorno della settimana e pubblica tutto con un solo link.</p>
+            </div>
+            <span class="preview-label">WORKOUT Link</span>
+        </div>
+
+        <div class="creator-connect">
+            <div>
+                <strong id="creator-status">WORKOUT Link non collegato</strong>
+                <span id="creator-status-note">Collega questo Generator una sola volta per pubblicare.</span>
+            </div>
+            <div class="creator-connect-actions">
+                <input id="creator-name" type="text" placeholder="Nome creator" maxlength="80">
+                <button id="connect-wol" class="secondary" type="button">COLLEGA WORKOUT LINK</button>
+                <button id="disconnect-wol" class="secondary hidden" type="button">SCOLLEGA</button>
+            </div>
+        </div>
+
+        <div class="week-meta">
+            <label class="field">
+                <span>Titolo settimana</span>
+                <input id="week-title" type="text" value="Settimana di allenamento">
+                <small class="field-error"></small>
+            </label>
+            <label class="field">
+                <span>Descrizione</span>
+                <input id="week-description" type="text" placeholder="Opzionale">
+                <small class="field-error"></small>
+            </label>
+        </div>
+
+        <div id="week-list" class="week-list"></div>
+
+        <div id="wol-result" class="wol-result hidden">
+            <strong>Pubblicazione completata</strong>
+            <a id="wol-url" href="#" target="_blank" rel="noopener noreferrer"></a>
+            <div class="week-actions">
+                <button id="copy-wol-link" class="secondary" type="button">COPIA LINK</button>
+                <button id="open-wol-link" class="secondary" type="button">APRI LINK</button>
+            </div>
+        </div>
+
+        <div class="week-actions">
+            <button id="publish-wol" class="primary-button" type="button">PUBBLICA SU WORKOUT LINK</button>
+        </div>
+    </section>
+    </aside>
+    </div>
 
     <div id="error" class="error-box hidden"></div>
 
     <div class="actions">
-        <button id="generate" class="primary-button" type="button">
-            GENERA JSON GARMIN
-        </button>
+        <button id="send-intervals" class="secondary" type="button">INVIA A INTERVALS.ICU</button>
+        <button id="generate" class="primary-button" type="button">GENERA JSON GARMIN</button>
     </div>
 </main>
 
 <template id="step-template">
     <article class="card block-card" data-kind="step">
         <div class="block-header">
-            <div>
+            <div class="block-title-area">
                 <span class="block-number"></span>
-                <h2>Step singolo</h2>
+                <span class="phase-badge">STEP</span>
+                <div>
+                    <h2>Step singolo</h2>
+                    <p class="block-summary"></p>
+                </div>
             </div>
             <div class="block-actions">
-                <button type="button" data-action="up">↑</button>
-                <button type="button" data-action="down">↓</button>
+                <button type="button" data-action="toggle">Comprimi</button>
+                <button type="button" data-action="up" title="Sposta su">↑</button>
+                <button type="button" data-action="down" title="Sposta giù">↓</button>
                 <button type="button" data-action="duplicate">Duplica</button>
-                <button type="button" data-action="delete">Elimina</button>
+                <button type="button" data-action="delete" class="danger-action">Elimina</button>
             </div>
         </div>
-        <div class="step-editor"></div>
+        <div class="block-body">
+            <div class="step-editor"></div>
+        </div>
     </article>
 </template>
 
 <template id="repeat-template">
-    <article class="card block-card" data-kind="repeat">
+    <article class="card block-card repeat-card" data-kind="repeat">
         <div class="block-header">
-            <div>
+            <div class="block-title-area">
                 <span class="block-number"></span>
-                <h2>Blocco ripetute</h2>
+                <span class="phase-badge repeat-badge">RIPETUTE</span>
+                <div>
+                    <h2>Blocco ripetute</h2>
+                    <p class="block-summary"></p>
+                </div>
             </div>
             <div class="block-actions">
-                <button type="button" data-action="up">↑</button>
-                <button type="button" data-action="down">↓</button>
+                <button type="button" data-action="toggle">Comprimi</button>
+                <button type="button" data-action="up" title="Sposta su">↑</button>
+                <button type="button" data-action="down" title="Sposta giù">↓</button>
                 <button type="button" data-action="duplicate">Duplica</button>
-                <button type="button" data-action="delete">Elimina</button>
+                <button type="button" data-action="delete" class="danger-action">Elimina</button>
             </div>
         </div>
 
-        <label class="field compact">
-            <span>Ripetizioni</span>
-            <input class="repetitions" type="number" min="1" step="1" value="4">
-        </label>
+        <div class="block-body">
+            <label class="field compact repetitions-field">
+                <span>Ripetizioni</span>
+                <input class="repetitions" type="number" min="1" step="1" value="4">
+                <small class="field-error"></small>
+            </label>
 
-        <div class="subcard">
-            <h3>Lavoro</h3>
-            <div class="work-editor"></div>
-        </div>
+            <div class="subcard work-subcard">
+                <h3>Lavoro</h3>
+                <div class="work-editor"></div>
+            </div>
 
-        <div class="subcard">
-            <h3>Recupero</h3>
-            <div class="recovery-editor"></div>
+            <div class="subcard recovery-subcard">
+                <h3>Recupero</h3>
+                <div class="recovery-editor"></div>
+            </div>
         </div>
     </article>
 </template>
@@ -104,6 +215,29 @@
 const builder = document.getElementById("builder");
 const preview = document.getElementById("preview");
 const errorBox = document.getElementById("error");
+const validationStatus = document.getElementById("validation-status");
+const generateButton = document.getElementById("generate");
+const sendIntervalsButton = document.getElementById("send-intervals");
+const weekList = document.getElementById("week-list");
+const publishWolButton = document.getElementById("publish-wol");
+const wolResult = document.getElementById("wol-result");
+const wolUrl = document.getElementById("wol-url");
+const creatorStatus = document.getElementById("creator-status");
+const creatorStatusNote = document.getElementById("creator-status-note");
+const creatorNameInput = document.getElementById("creator-name");
+const connectWolButton = document.getElementById("connect-wol");
+const disconnectWolButton = document.getElementById("disconnect-wol");
+let weekItems = [];
+let editingWeekItemId = null;
+
+const roleNames = {
+    run: "Corsa",
+    warmup: "Riscaldamento",
+    interval: "Intervallo",
+    recovery: "Recupero",
+    cooldown: "Defaticamento",
+    other: "Altro",
+};
 
 function stepEditor(defaults = {}) {
     const wrap = document.createElement("div");
@@ -120,6 +254,7 @@ function stepEditor(defaults = {}) {
                 <option value="cooldown">Defaticamento</option>
                 <option value="other">Altro</option>
             </select>
+            <small class="field-error"></small>
         </label>
 
         <label class="field">
@@ -129,16 +264,19 @@ function stepEditor(defaults = {}) {
                 <option value="time">Tempo</option>
                 <option value="lap_button">Tasto LAP</option>
             </select>
+            <small class="field-error"></small>
         </label>
 
         <label class="field value-field">
             <span>Valore</span>
             <input class="value" type="number" min="0.01" step="0.01" value="1">
+            <small class="field-error"></small>
         </label>
 
         <label class="field unit-field">
             <span>Unità</span>
             <select class="unit"></select>
+            <small class="field-error"></small>
         </label>
 
         <label class="field">
@@ -147,18 +285,21 @@ function stepEditor(defaults = {}) {
                 <option value="none">Nessuno</option>
                 <option value="hr_range">FC personalizzata</option>
                 <option value="hr_zone">Zona FC</option>
-                <option value="pace" disabled>Passo (EXPERIMENTAL)</option>
+                <option value="pace">Passo</option>
             </select>
+            <small class="field-error"></small>
         </label>
 
         <label class="field hr-range-field hidden">
             <span>FC minima</span>
             <input class="hr-min" type="number" min="1" step="1" value="125">
+            <small class="field-error"></small>
         </label>
 
         <label class="field hr-range-field hidden">
             <span>FC massima</span>
             <input class="hr-max" type="number" min="1" step="1" value="138">
+            <small class="field-error"></small>
         </label>
 
         <label class="field hr-zone-field hidden">
@@ -170,18 +311,26 @@ function stepEditor(defaults = {}) {
                 <option value="4">Z4</option>
                 <option value="5">Z5</option>
             </select>
+            <small class="field-error"></small>
+        </label>
+
+        <label class="field pace-field hidden">
+            <span>Limite veloce (min/km)</span>
+            <input class="pace-fast" type="text" value="4:10" inputmode="numeric" placeholder="4:10">
+            <small class="field-error"></small>
+        </label>
+
+        <label class="field pace-field hidden">
+            <span>Limite lento (min/km)</span>
+            <input class="pace-slow" type="text" value="4:20" inputmode="numeric" placeholder="4:20">
+            <small class="field-error"></small>
         </label>
     `;
 
-    const role = wrap.querySelector(".role");
-    const endType = wrap.querySelector(".end-type");
-    const value = wrap.querySelector(".value");
-    const target = wrap.querySelector(".target");
-
-    role.value = defaults.role || "run";
-    endType.value = defaults.end_type || "distance";
-    value.value = defaults.value || 1;
-    target.value = defaults.target || "none";
+    wrap.querySelector(".role").value = defaults.role || "run";
+    wrap.querySelector(".end-type").value = defaults.end_type || "distance";
+    wrap.querySelector(".value").value = defaults.value ?? 1;
+    wrap.querySelector(".target").value = defaults.target || "none";
 
     updateEndTypeFields(wrap, defaults.unit);
     updateTargetFields(wrap);
@@ -189,13 +338,15 @@ function stepEditor(defaults = {}) {
     if (defaults.hr_min) wrap.querySelector(".hr-min").value = defaults.hr_min;
     if (defaults.hr_max) wrap.querySelector(".hr-max").value = defaults.hr_max;
     if (defaults.zone) wrap.querySelector(".zone").value = defaults.zone;
+    if (defaults.pace_fast) wrap.querySelector(".pace-fast").value = defaults.pace_fast;
+    if (defaults.pace_slow) wrap.querySelector(".pace-slow").value = defaults.pace_slow;
 
     wrap.querySelectorAll("input, select").forEach(el => {
-        el.addEventListener("input", updatePreview);
+        el.addEventListener("input", refreshUI);
         el.addEventListener("change", () => {
             if (el.classList.contains("end-type")) updateEndTypeFields(wrap);
             if (el.classList.contains("target")) updateTargetFields(wrap);
-            updatePreview();
+            refreshUI();
         });
     });
 
@@ -223,7 +374,6 @@ function updateEndTypeFields(editor, preferred) {
         : [["s", "sec"], ["min", "min"]];
 
     select.innerHTML = "";
-
     options.forEach(([value, label]) => {
         const option = document.createElement("option");
         option.value = value;
@@ -240,76 +390,64 @@ function updateEndTypeFields(editor, preferred) {
 
 function updateTargetFields(editor) {
     const target = editor.querySelector(".target").value;
-
-    editor.querySelectorAll(".hr-range-field").forEach(el => {
-        el.classList.toggle("hidden", target !== "hr_range");
-    });
-
-    editor.querySelectorAll(".hr-zone-field").forEach(el => {
-        el.classList.toggle("hidden", target !== "hr_zone");
-    });
+    editor.querySelectorAll(".hr-range-field").forEach(el => el.classList.toggle("hidden", target !== "hr_range"));
+    editor.querySelectorAll(".hr-zone-field").forEach(el => el.classList.toggle("hidden", target !== "hr_zone"));
+    editor.querySelectorAll(".pace-field").forEach(el => el.classList.toggle("hidden", target !== "pace"));
 }
 
 function addStep(defaults = {}) {
-    const node = document.getElementById("step-template")
-        .content.firstElementChild.cloneNode(true);
-
-    const editor = stepEditor(defaults);
-    node.querySelector(".step-editor").appendChild(editor);
-
+    const node = document.getElementById("step-template").content.firstElementChild.cloneNode(true);
+    node.querySelector(".step-editor").appendChild(stepEditor(defaults));
     attachBlockActions(node);
     builder.appendChild(node);
-    refreshNumbers();
-    updatePreview();
+    refreshUI();
 }
 
 function addRepeat(defaults = {}) {
-    const node = document.getElementById("repeat-template")
-        .content.firstElementChild.cloneNode(true);
-
+    const node = document.getElementById("repeat-template").content.firstElementChild.cloneNode(true);
     node.querySelector(".repetitions").value = defaults.repetitions || 4;
 
     const work = stepEditor({
         role: "interval",
         end_type: defaults.work?.end_type || "distance",
-        value: defaults.work?.value || 400,
+        value: defaults.work?.value ?? 400,
         unit: defaults.work?.unit || "m",
         target: defaults.work?.target || "none",
         hr_min: defaults.work?.hr_min,
         hr_max: defaults.work?.hr_max,
         zone: defaults.work?.zone,
+        pace_fast: defaults.work?.pace_fast,
+        pace_slow: defaults.work?.pace_slow,
     });
 
     const recovery = stepEditor({
         role: "recovery",
         end_type: defaults.recovery?.end_type || "distance",
-        value: defaults.recovery?.value || 200,
+        value: defaults.recovery?.value ?? 200,
         unit: defaults.recovery?.unit || "m",
         target: defaults.recovery?.target || "none",
         hr_min: defaults.recovery?.hr_min,
         hr_max: defaults.recovery?.hr_max,
         zone: defaults.recovery?.zone,
+        pace_fast: defaults.recovery?.pace_fast,
+        pace_slow: defaults.recovery?.pace_slow,
     });
 
     work.querySelector(".role").closest(".field").classList.add("hidden");
     recovery.querySelector(".role").closest(".field").classList.add("hidden");
-
     node.querySelector(".work-editor").appendChild(work);
     node.querySelector(".recovery-editor").appendChild(recovery);
-
-    node.querySelector(".repetitions").addEventListener("input", updatePreview);
+    node.querySelector(".repetitions").addEventListener("input", refreshUI);
 
     attachBlockActions(node);
     builder.appendChild(node);
-    refreshNumbers();
-    updatePreview();
+    refreshUI();
 }
 
 function attachBlockActions(node) {
     node.querySelectorAll("[data-action]").forEach(button => {
         button.addEventListener("click", () => {
             const action = button.dataset.action;
-
             if (action === "delete") {
                 node.remove();
             } else if (action === "up" && node.previousElementSibling) {
@@ -318,12 +456,17 @@ function attachBlockActions(node) {
                 builder.insertBefore(node.nextElementSibling, node);
             } else if (action === "duplicate") {
                 duplicateBlock(node);
+            } else if (action === "toggle") {
+                toggleBlock(node, button);
             }
-
-            refreshNumbers();
-            updatePreview();
+            refreshUI();
         });
     });
+}
+
+function toggleBlock(block, button) {
+    const collapsed = block.classList.toggle("collapsed");
+    button.textContent = collapsed ? "Espandi" : "Comprimi";
 }
 
 function serializeEditor(editor) {
@@ -337,17 +480,15 @@ function serializeEditor(editor) {
         hr_min: Number(editor.querySelector(".hr-min").value),
         hr_max: Number(editor.querySelector(".hr-max").value),
         zone: Number(editor.querySelector(".zone").value),
+        pace_fast: editor.querySelector(".pace-fast").value.trim(),
+        pace_slow: editor.querySelector(".pace-slow").value.trim(),
     };
 }
 
 function serializeBlock(block) {
     if (block.dataset.kind === "step") {
-        return {
-            type: "step",
-            ...serializeEditor(block.querySelector(".step-grid")),
-        };
+        return {type: "step", ...serializeEditor(block.querySelector(".step-grid"))};
     }
-
     return {
         type: "repeat",
         repetitions: Number(block.querySelector(".repetitions").value),
@@ -358,15 +499,192 @@ function serializeBlock(block) {
 
 function duplicateBlock(block) {
     const data = serializeBlock(block);
-
-    if (data.type === "step") {
-        addStep(data);
-    } else {
-        addRepeat(data);
-    }
-
+    if (data.type === "step") addStep(data); else addRepeat(data);
     const newBlock = builder.lastElementChild;
     builder.insertBefore(newBlock, block.nextElementSibling);
+}
+
+function paceToSeconds(value) {
+    if (!/^\d+:\d{2}$/.test(value)) return null;
+    const [minutes, seconds] = value.split(":").map(Number);
+    if (seconds > 59) return null;
+    const total = minutes * 60 + seconds;
+    return total > 0 ? total : null;
+}
+
+function setFieldError(input, message) {
+    const field = input.closest(".field");
+    if (!field) return;
+    input.classList.toggle("invalid", Boolean(message));
+    const error = field.querySelector(".field-error");
+    if (error) error.textContent = message || "";
+}
+
+function clearEditorErrors(editor) {
+    editor.querySelectorAll("input, select").forEach(el => setFieldError(el, ""));
+}
+
+function validateEditor(editor) {
+    clearEditorErrors(editor);
+    let valid = true;
+    const endType = editor.querySelector(".end-type").value;
+    const target = editor.querySelector(".target").value;
+
+    if (endType !== "lap_button") {
+        const valueInput = editor.querySelector(".value");
+        if (!(Number(valueInput.value) > 0)) {
+            setFieldError(valueInput, "Inserisci un valore maggiore di zero.");
+            valid = false;
+        }
+    }
+
+    if (target === "hr_range") {
+        const min = editor.querySelector(".hr-min");
+        const max = editor.querySelector(".hr-max");
+        if (!(Number(min.value) > 0)) {
+            setFieldError(min, "FC minima non valida.");
+            valid = false;
+        }
+        if (!(Number(max.value) > 0)) {
+            setFieldError(max, "FC massima non valida.");
+            valid = false;
+        }
+        if (Number(min.value) >= Number(max.value)) {
+            setFieldError(max, "Deve essere maggiore della FC minima.");
+            valid = false;
+        }
+    }
+
+    if (target === "pace") {
+        const fast = editor.querySelector(".pace-fast");
+        const slow = editor.querySelector(".pace-slow");
+        const fastSeconds = paceToSeconds(fast.value.trim());
+        const slowSeconds = paceToSeconds(slow.value.trim());
+        if (fastSeconds === null) {
+            setFieldError(fast, "Usa il formato mm:ss, es. 4:10.");
+            valid = false;
+        }
+        if (slowSeconds === null) {
+            setFieldError(slow, "Usa il formato mm:ss, es. 4:20.");
+            valid = false;
+        }
+        if (fastSeconds !== null && slowSeconds !== null && fastSeconds >= slowSeconds) {
+            setFieldError(slow, "Il limite lento deve essere più lento del limite veloce.");
+            valid = false;
+        }
+    }
+
+    return valid;
+}
+
+function validateAll() {
+    let valid = true;
+    const nameInput = document.getElementById("workout-name");
+    setFieldError(nameInput, "");
+
+    if (!nameInput.value.trim()) {
+        setFieldError(nameInput, "Inserisci il nome dell'allenamento.");
+        valid = false;
+    }
+
+    if (!builder.children.length) valid = false;
+
+    [...builder.children].forEach(block => {
+        block.classList.remove("has-error");
+        let blockValid = true;
+
+        if (block.dataset.kind === "step") {
+            blockValid = validateEditor(block.querySelector(".step-grid"));
+        } else {
+            const repetitions = block.querySelector(".repetitions");
+            setFieldError(repetitions, "");
+            if (!(Number(repetitions.value) >= 1 && Number.isInteger(Number(repetitions.value)))) {
+                setFieldError(repetitions, "Inserisci un numero intero maggiore di zero.");
+                blockValid = false;
+            }
+            blockValid = validateEditor(block.querySelector(".work-editor .step-grid")) && blockValid;
+            blockValid = validateEditor(block.querySelector(".recovery-editor .step-grid")) && blockValid;
+        }
+
+        block.classList.toggle("has-error", !blockValid);
+        valid = valid && blockValid;
+    });
+
+    validationStatus.textContent = valid ? "✓ Workout valido" : "⚠ Correggi i campi evidenziati";
+    validationStatus.classList.toggle("valid", valid);
+    validationStatus.classList.toggle("invalid-status", !valid);
+    generateButton.disabled = !valid;
+    sendIntervalsButton.disabled = !valid;
+    return valid;
+}
+
+function targetText(data) {
+    if (data.target === "hr_range") return `${data.hr_min}-${data.hr_max} bpm`;
+    if (data.target === "hr_zone") return `Z${data.zone}`;
+    if (data.target === "pace") return `${data.pace_fast}-${data.pace_slow}/km`;
+    return "nessun target";
+}
+
+function durationText(data) {
+    return data.end_type === "lap_button" ? "Tasto LAP" : `${data.value} ${data.unit}`;
+}
+
+function stepSummary(data, includeRole = true) {
+    const role = includeRole ? `${roleNames[data.role]} · ` : "";
+    return `${role}${durationText(data)} · ${targetText(data)}`;
+}
+
+function updateBlockSummaries() {
+    [...builder.children].forEach(block => {
+        const data = serializeBlock(block);
+        const summary = block.querySelector(".block-summary");
+        const badge = block.querySelector(".phase-badge");
+
+        block.classList.remove("phase-warmup", "phase-run", "phase-interval", "phase-recovery", "phase-cooldown", "phase-other");
+
+        if (data.type === "step") {
+            summary.textContent = stepSummary(data, false);
+            badge.textContent = roleNames[data.role].toUpperCase();
+            block.classList.add(`phase-${data.role}`);
+        } else {
+            summary.textContent = `${data.repetitions} × ${durationText(data.work)} (${targetText(data.work)}) + ${durationText(data.recovery)} (${targetText(data.recovery)})`;
+            badge.textContent = "RIPETUTE";
+        }
+    });
+}
+
+function updatePreview() {
+    const blocks = [...builder.children];
+    preview.innerHTML = "";
+
+    if (!blocks.length) {
+        preview.innerHTML = '<p class="empty-preview">Aggiungi almeno uno step.</p>';
+        return;
+    }
+
+    blocks.forEach((block, index) => {
+        const data = serializeBlock(block);
+        const item = document.createElement("div");
+        item.className = "preview-item";
+        const number = document.createElement("span");
+        number.className = "preview-number";
+        number.textContent = index + 1;
+        const content = document.createElement("div");
+        content.className = "preview-content";
+
+        if (data.type === "step") {
+            content.innerHTML = `<strong>${roleNames[data.role]}</strong><span>${durationText(data)} · ${targetText(data)}</span>`;
+        } else {
+            content.innerHTML = `
+                <strong>${data.repetitions} ripetizioni</strong>
+                <span>Lavoro: ${durationText(data.work)} · ${targetText(data.work)}</span>
+                <span>Recupero: ${durationText(data.recovery)} · ${targetText(data.recovery)}</span>
+            `;
+        }
+
+        item.append(number, content);
+        preview.appendChild(item);
+    });
 }
 
 function refreshNumbers() {
@@ -375,62 +693,381 @@ function refreshNumbers() {
     });
 }
 
-function targetText(data) {
-    if (data.target === "hr_range") {
-        return ` · ${data.hr_min}-${data.hr_max} bpm`;
-    }
-
-    if (data.target === "hr_zone") {
-        return ` · Z${data.zone}`;
-    }
-
-    return "";
+function refreshUI() {
+    refreshNumbers();
+    updateBlockSummaries();
+    updatePreview();
+    validateAll();
 }
 
-function stepText(data) {
-    const roleNames = {
-        run: "Corsa",
-        warmup: "Riscaldamento",
-        interval: "Intervallo",
-        recovery: "Recupero",
-        cooldown: "Defaticamento",
-        other: "Altro",
+function currentWorkoutPayload() {
+    return {
+        name: document.getElementById("workout-name").value,
+        items: [...builder.children].map(serializeBlock),
     };
-
-    const duration = data.end_type === "lap_button"
-        ? "Tasto LAP"
-        : `${data.value} ${data.unit}`;
-
-    return `${roleNames[data.role]}: ${duration}${targetText(data)}`;
 }
 
-function updatePreview() {
-    const lines = [];
-    const name = document.getElementById("workout-name").value.trim();
+function renderWeekList() {
+    weekList.innerHTML = "";
 
-    if (name) {
-        lines.push(name, "");
+    if (!weekItems.length) {
+        weekList.innerHTML = '<p class="empty-preview">Nessun allenamento aggiunto alla settimana.</p>';
+        publishWolButton.disabled = true;
+        return;
     }
 
-    [...builder.children].forEach(block => {
-        const data = serializeBlock(block);
+    weekItems
+        .slice()
+        .sort((a, b) => a.day_offset - b.day_offset)
+        .forEach(item => {
+            const row = document.createElement("div");
+            row.className = "week-item";
+            if (item.id === editingWeekItemId) row.classList.add("is-editing");
 
-        if (data.type === "step") {
-            lines.push(stepText(data));
-        } else {
-            lines.push(`${data.repetitions} ×`);
-            lines.push(`  ${stepText({...data.work, role: "interval"})}`);
-            lines.push(`  ${stepText({...data.recovery, role: "recovery"})}`);
-        }
+            row.innerHTML =
+                '<div class="week-item-copy"><strong>' +
+                ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"][item.day_offset] +
+                '</strong><span>' + escapeHtmlClient(item.workout.name) + '</span></div>' +
+                '<div class="week-item-actions">' +
+                    '<button type="button" class="secondary-action" data-edit="' + item.id + '">Modifica</button>' +
+                    '<button type="button" class="danger-action" data-remove="' + item.id + '">Rimuovi</button>' +
+                '</div>';
+            weekList.appendChild(row);
+        });
 
-        lines.push("");
+    weekList.querySelectorAll("[data-edit]").forEach(button => {
+        button.addEventListener("click", () => editWeekWorkout(button.dataset.edit));
     });
 
-    preview.textContent = lines.join("\n").trim();
+    weekList.querySelectorAll("[data-remove]").forEach(button => {
+        button.addEventListener("click", () => {
+            const id = button.dataset.remove;
+            weekItems = weekItems.filter(item => item.id !== id);
+            if (editingWeekItemId === id) {
+                resetWorkoutBuilder();
+            }
+            renderWeekList();
+        });
+    });
+
+    publishWolButton.disabled = false;
+}
+function escapeHtmlClient(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function loadWorkoutIntoBuilder(workout) {
+    builder.innerHTML = "";
+    document.getElementById("workout-name").value = workout.name || "";
+
+    (workout.items || []).forEach(item => {
+        if (item.type === "step") {
+            addStep(item);
+        } else if (item.type === "repeat") {
+            addRepeat(item);
+        }
+    });
+
+    if (!builder.children.length) {
+        addStep({role: "run", end_type: "distance", value: 1, unit: "km", target: "none"});
+    }
+
+    refreshUI();
+}
+
+function setEditingMode(itemId) {
+    editingWeekItemId = itemId;
+    const banner = document.getElementById("editing-banner");
+    const button = document.getElementById("add-current-to-week");
+
+    banner.classList.toggle("hidden", !itemId);
+    button.textContent = itemId ? "AGGIORNA ALLENAMENTO" : "+ AGGIUNGI ALLA SETTIMANA";
+    renderWeekList();
+}
+
+function editWeekWorkout(itemId) {
+    const item = weekItems.find(entry => entry.id === itemId);
+    if (!item) return;
+
+    document.getElementById("week-day").value = String(item.day_offset);
+    loadWorkoutIntoBuilder(JSON.parse(JSON.stringify(item.workout)));
+    setEditingMode(itemId);
+    window.scrollTo({top: 0, behavior: "smooth"});
+}
+
+function nextFreeWeekDay() {
+    const used = new Set(weekItems.map(item => item.day_offset));
+    for (let day = 0; day < 7; day += 1) {
+        if (!used.has(day)) return day;
+    }
+    return 0;
+}
+
+function resetWorkoutBuilder() {
+    editingWeekItemId = null;
+    builder.innerHTML = "";
+    document.getElementById("workout-name").value = "Nuovo allenamento";
+    document.getElementById("workout-date").value = "";
+    document.getElementById("week-day").value = String(nextFreeWeekDay());
+    addStep({role: "run", end_type: "distance", value: 1, unit: "km", target: "none"});
+    document.getElementById("editing-banner").classList.add("hidden");
+    document.getElementById("add-current-to-week").textContent = "+ AGGIUNGI ALLA SETTIMANA";
+    errorBox.classList.add("hidden");
+    refreshUI();
+    renderWeekList();
+}
+
+function addCurrentWorkoutToWeek() {
+    errorBox.classList.add("hidden");
+    if (!validateAll()) {
+        errorBox.textContent = "Correggi l'allenamento prima di aggiungerlo alla settimana.";
+        errorBox.classList.remove("hidden");
+        return;
+    }
+
+    const dayOffset = Number(document.getElementById("week-day").value);
+    const workout = JSON.parse(JSON.stringify(currentWorkoutPayload()));
+
+    if (editingWeekItemId) {
+        const editingItem = weekItems.find(item => item.id === editingWeekItemId);
+        if (!editingItem) {
+            setEditingMode(null);
+            return;
+        }
+
+        weekItems = weekItems.filter(item =>
+            item.id === editingWeekItemId || item.day_offset !== dayOffset
+        );
+
+        editingItem.day_offset = dayOffset;
+        editingItem.workout = workout;
+        setEditingMode(null);
+    } else {
+        weekItems = weekItems.filter(item => item.day_offset !== dayOffset);
+        weekItems.push({
+            id: crypto.randomUUID(),
+            day_offset: dayOffset,
+            workout,
+        });
+    }
+
+    renderWeekList();
+    if (!editingWeekItemId) {
+        document.getElementById("week-day").value = String(nextFreeWeekDay());
+    }
+}
+async function refreshCreatorStatus() {
+    try {
+        const response = await fetch("/wol-creator/status");
+        const data = await response.json();
+        const connected = Boolean(data.connected);
+        creatorStatus.textContent = connected
+            ? "Collegato come " + (data.creator_name || "Creator")
+            : "WORKOUT Link non collegato";
+        creatorStatusNote.textContent = connected
+            ? "Questo Generator può pubblicare settimane su WORKOUT Link."
+            : "Collega questo Generator una sola volta per pubblicare.";
+        creatorNameInput.classList.toggle("hidden", connected);
+        connectWolButton.classList.toggle("hidden", connected);
+        disconnectWolButton.classList.toggle("hidden", !connected);
+    } catch {
+        creatorStatus.textContent = "Stato WORKOUT Link non disponibile";
+        creatorStatusNote.textContent = "Riprova tra poco.";
+    }
+}
+
+function waitForCreatorPairing(pairingId) {
+    const startedAt = Date.now();
+    const timer = setInterval(async () => {
+        if (Date.now() - startedAt > 15 * 60 * 1000) {
+            clearInterval(timer);
+            creatorStatus.textContent = "Associazione scaduta";
+            creatorStatusNote.textContent = "Avvia una nuova associazione.";
+            connectWolButton.disabled = false;
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                "/wol-creator/pair/status?pairing_id=" + encodeURIComponent(pairingId)
+            );
+            const data = await response.json();
+
+            if (response.ok && data.status === "approved") {
+                clearInterval(timer);
+                connectWolButton.disabled = false;
+                await refreshCreatorStatus();
+                return;
+            }
+
+            if (response.ok && data.status === "pending") {
+                return;
+            }
+
+            clearInterval(timer);
+            connectWolButton.disabled = false;
+            creatorStatus.textContent = "Associazione non riuscita";
+            creatorStatusNote.textContent = data.error || "Riprova.";
+        } catch {
+            // Keep polling through transient network errors.
+        }
+    }, 2000);
+}
+
+async function connectWorkoutLink() {
+    const displayName = creatorNameInput.value.trim();
+    if (!displayName) {
+        errorBox.textContent = "Inserisci il nome del creator.";
+        errorBox.classList.remove("hidden");
+        creatorNameInput.focus();
+        return;
+    }
+
+    errorBox.classList.add("hidden");
+    connectWolButton.disabled = true;
+    creatorStatus.textContent = "Associazione in corso…";
+    creatorStatusNote.textContent = "Conferma l'autorizzazione nella scheda WORKOUT Link.";
+
+    const popup = window.open("", "_blank");
+    try {
+        const response = await fetch("/wol-creator/pair/start", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({display_name: displayName}),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.pairing_id || !data.approve_url) {
+            throw new Error(data.error || "Impossibile avviare l'associazione.");
+        }
+
+        if (popup) {
+            popup.location = data.approve_url;
+        } else {
+            window.open(data.approve_url, "_blank", "noopener,noreferrer");
+        }
+        waitForCreatorPairing(data.pairing_id);
+    } catch (error) {
+        if (popup) popup.close();
+        connectWolButton.disabled = false;
+        creatorStatus.textContent = "WORKOUT Link non collegato";
+        creatorStatusNote.textContent = "Collega questo Generator una sola volta per pubblicare.";
+        errorBox.textContent = error.message;
+        errorBox.classList.remove("hidden");
+    }
+}
+
+async function disconnectWorkoutLink() {
+    await fetch("/wol-creator/disconnect", {method: "POST"});
+    await refreshCreatorStatus();
+}
+
+async function publishWeekToWol() {
+    errorBox.classList.add("hidden");
+    wolResult.classList.add("hidden");
+
+    const title = document.getElementById("week-title").value.trim();
+    if (!title) {
+        errorBox.textContent = "Inserisci il titolo della settimana.";
+        errorBox.classList.remove("hidden");
+        return;
+    }
+
+    if (!weekItems.length) {
+        errorBox.textContent = "Aggiungi almeno un allenamento alla settimana.";
+        errorBox.classList.remove("hidden");
+        return;
+    }
+
+    publishWolButton.disabled = true;
+    publishWolButton.textContent = "PUBBLICAZIONE...";
+
+    try {
+        const response = await fetch("/publish-to-wol", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                title,
+                description: document.getElementById("week-description").value.trim(),
+                items: weekItems.map(item => ({
+                    day_offset: item.day_offset,
+                    workout: item.workout,
+                })),
+            }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || "Errore durante la pubblicazione su WOL.");
+        }
+
+        wolUrl.textContent = data.url;
+        wolUrl.href = data.url;
+        wolResult.classList.remove("hidden");
+    } catch (error) {
+        errorBox.textContent = error.message;
+        errorBox.classList.remove("hidden");
+    } finally {
+        publishWolButton.disabled = !weekItems.length;
+        publishWolButton.textContent = "PUBBLICA SU WORKOUT LINK";
+    }
+}
+
+async function copyWolLink() {
+    if (!wolUrl.href || wolResult.classList.contains("hidden")) return;
+    await navigator.clipboard.writeText(wolUrl.href);
+}
+
+function openWolLink() {
+    if (!wolUrl.href || wolResult.classList.contains("hidden")) return;
+    window.open(wolUrl.href, "_blank", "noopener,noreferrer");
+}
+
+async function sendToIntervals() {
+    errorBox.classList.add("hidden");
+    if (!validateAll()) return;
+
+    const dateInput = document.getElementById("workout-date");
+    setFieldError(dateInput, "");
+    if (!dateInput.value) {
+        setFieldError(dateInput, "Seleziona la data dell'allenamento.");
+        return;
+    }
+
+    const payload = {
+        name: document.getElementById("workout-name").value,
+        date: dateInput.value,
+        items: [...builder.children].map(serializeBlock),
+    };
+
+    const response = await fetch("/send-to-intervals", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+        errorBox.textContent = data.error || "Errore durante l'invio a Intervals.icu.";
+        errorBox.classList.remove("hidden");
+        return;
+    }
+
+    errorBox.textContent = data.message || "Workout inviato a Intervals.icu.";
+    errorBox.classList.remove("hidden");
 }
 
 async function generateJson() {
     errorBox.classList.add("hidden");
+    if (!validateAll()) {
+        errorBox.textContent = "Correggi i campi evidenziati prima di generare il JSON.";
+        errorBox.classList.remove("hidden");
+        return;
+    }
 
     const payload = {
         name: document.getElementById("workout-name").value,
@@ -452,9 +1089,8 @@ async function generateJson() {
 
     const blob = await response.blob();
     const disposition = response.headers.get("Content-Disposition") || "";
-    const match = disposition.match(/filename="?([^"]+)"?/);
+    const match = disposition.match(/filename="?([^";]+)"?/);
     const filename = match ? match[1] : "garmin_workout.json";
-
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -468,29 +1104,27 @@ async function generateJson() {
 document.getElementById("add-step").addEventListener("click", () => addStep());
 document.getElementById("add-repeat").addEventListener("click", () => addRepeat());
 document.getElementById("generate").addEventListener("click", generateJson);
-document.getElementById("workout-name").addEventListener("input", updatePreview);
+document.getElementById("send-intervals").addEventListener("click", sendToIntervals);
+document.getElementById("add-current-to-week").addEventListener("click", addCurrentWorkoutToWeek);
+document.getElementById("new-workout").addEventListener("click", resetWorkoutBuilder);
+document.getElementById("cancel-edit-workout").addEventListener("click", resetWorkoutBuilder);
+document.getElementById("publish-wol").addEventListener("click", publishWeekToWol);
+document.getElementById("copy-wol-link").addEventListener("click", copyWolLink);
+document.getElementById("open-wol-link").addEventListener("click", openWolLink);
+connectWolButton.addEventListener("click", connectWorkoutLink);
+disconnectWolButton.addEventListener("click", disconnectWorkoutLink);
+document.getElementById("workout-name").addEventListener("input", refreshUI);
 
-addStep({
-    role: "warmup",
-    end_type: "distance",
-    value: 2.5,
-    unit: "km",
-    target: "none",
-});
-
+refreshCreatorStatus();
+addStep({role: "warmup", end_type: "distance", value: 2.5, unit: "km", target: "none"});
 addRepeat({
     repetitions: 6,
     work: {end_type: "time", value: 20, unit: "s", target: "none"},
     recovery: {end_type: "distance", value: 150, unit: "m", target: "none"},
 });
-
-addStep({
-    role: "cooldown",
-    end_type: "distance",
-    value: 1,
-    unit: "km",
-    target: "none",
-});
+addStep({role: "cooldown", end_type: "distance", value: 1, unit: "km", target: "none"});
+renderWeekList();
+refreshUI();
 </script>
 </body>
 </html>

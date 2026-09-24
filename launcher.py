@@ -28,7 +28,7 @@ class ServerThread(threading.Thread):
 class Launcher:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("Garmin Workout Generator")
+        self.root.title("WORKOUT Generator")
         self.root.geometry("460x230")
         self.root.resizable(False, False)
 
@@ -43,7 +43,7 @@ class Launcher:
 
         title = tk.Label(
             container,
-            text="Garmin Workout Generator",
+            text="WORKOUT Generator",
             font=("Segoe UI", 18, "bold"),
         )
         title.pack(anchor="w")
@@ -71,7 +71,7 @@ class Launcher:
 
         open_button = tk.Button(
             buttons,
-            text="Apri Garmin Workout Generator",
+            text="Apri WORKOUT Generator",
             command=self.open_browser,
             padx=14,
             pady=8,
@@ -96,7 +96,7 @@ class Launcher:
                 "Impossibile avviare",
                 (
                     f"Non riesco ad avviare il server locale sulla porta {PORT}.\n\n"
-                    "È possibile che Garmin Workout Generator sia già aperto.\n\n"
+                    "È possibile che WORKOUT Generator sia già aperto.\n\n"
                     f"Dettaglio: {exc}"
                 ),
             )

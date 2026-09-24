@@ -110,6 +110,13 @@ HEART_RATE_TARGET = {
 }
 
 
+PACE_TARGET = {
+    "workoutTargetTypeId": 6,
+    "workoutTargetTypeKey": "pace.zone",
+    "displayOrder": 6,
+}
+
+
 EMPTY_STROKE_TYPE = {
     "strokeTypeId": 0,
     "strokeTypeKey": None,
@@ -190,6 +197,19 @@ def build_target(step: Step):
             "targetValueTwo": None,
             "targetValueUnit": None,
             "zoneNumber": step.target.zone_number,
+        }
+
+    if step.target.kind == TargetKind.PACE_RANGE:
+        return {
+            "targetType": PACE_TARGET.copy(),
+            "targetValueOne": (
+                1000.0 / step.target.pace_fast_seconds_per_km
+            ),
+            "targetValueTwo": (
+                1000.0 / step.target.pace_slow_seconds_per_km
+            ),
+            "targetValueUnit": None,
+            "zoneNumber": None,
         }
 
     raise ValueError(f"Unsupported target kind: {step.target.kind}")

@@ -26,6 +26,7 @@ class TargetKind(str, Enum):
     NONE = "none"
     HEART_RATE_RANGE = "heart_rate_range"
     HEART_RATE_ZONE = "heart_rate_zone"
+    PACE_RANGE = "pace_range"
 
 
 @dataclass(frozen=True)
@@ -34,6 +35,8 @@ class Target:
     min_bpm: Optional[int] = None
     max_bpm: Optional[int] = None
     zone_number: Optional[int] = None
+    pace_fast_seconds_per_km: Optional[float] = None
+    pace_slow_seconds_per_km: Optional[float] = None
 
     def __post_init__(self):
         if self.kind == TargetKind.NONE:
@@ -41,6 +44,8 @@ class Target:
                 self.min_bpm is not None
                 or self.max_bpm is not None
                 or self.zone_number is not None
+                or self.pace_fast_seconds_per_km is not None
+                or self.pace_slow_seconds_per_km is not None
             ):
                 raise ValueError(
                     "A target NONE cannot contain heart-rate values."
@@ -55,6 +60,14 @@ class Target:
             if self.zone_number is not None:
                 raise ValueError(
                     "Heart-rate range cannot contain zone_number."
+                )
+
+            if (
+                self.pace_fast_seconds_per_km is not None
+                or self.pace_slow_seconds_per_km is not None
+            ):
+                raise ValueError(
+                    "Heart-rate range cannot contain pace values."
                 )
 
             if self.min_bpm <= 0 or self.max_bpm <= 0:
@@ -78,6 +91,48 @@ class Target:
                     "Heart-rate zone cannot contain min/max bpm."
                 )
 
+            if (
+                self.pace_fast_seconds_per_km is not None
+                or self.pace_slow_seconds_per_km is not None
+            ):
+                raise ValueError(
+                    "Heart-rate zone cannot contain pace values."
+                )
+
+        elif self.kind == TargetKind.PACE_RANGE:
+            if (
+                self.pace_fast_seconds_per_km is None
+                or self.pace_slow_seconds_per_km is None
+            ):
+                raise ValueError(
+                    "Pace target requires fast and slow pace limits."
+                )
+
+            if (
+                self.min_bpm is not None
+                or self.max_bpm is not None
+                or self.zone_number is not None
+            ):
+                raise ValueError(
+                    "Pace target cannot contain heart-rate values."
+                )
+
+            if (
+                self.pace_fast_seconds_per_km <= 0
+                or self.pace_slow_seconds_per_km <= 0
+            ):
+                raise ValueError(
+                    "Pace values must be greater than zero."
+                )
+
+            if (
+                self.pace_fast_seconds_per_km
+                >= self.pace_slow_seconds_per_km
+            ):
+                raise ValueError(
+                    "Fast pace must be faster than slow pace."
+                )
+
     @classmethod
     def none(cls):
         return cls(kind=TargetKind.NONE)
@@ -95,6 +150,18 @@ class Target:
         return cls(
             kind=TargetKind.HEART_RATE_ZONE,
             zone_number=zone_number,
+        )
+
+    @classmethod
+    def pace_range(
+        cls,
+        fast_seconds_per_km: float,
+        slow_seconds_per_km: float,
+    ):
+        return cls(
+            kind=TargetKind.PACE_RANGE,
+            pace_fast_seconds_per_km=fast_seconds_per_km,
+            pace_slow_seconds_per_km=slow_seconds_per_km,
         )
 
 

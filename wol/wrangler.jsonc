@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "workoutlink",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-22",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "workoutlink-db",
+      "database_id": "974db1de-33c2-4310-8bbb-cfcb3dc568ba"
+    }
+  ]
+}

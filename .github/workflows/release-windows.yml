@@ -1,17 +1,83 @@
-name: Build Windows Release
+name: Build Desktop Packages
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-build.txt
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+
   build-windows:
+    needs: test
     runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-build.txt
+
+      - name: Build Windows executable
+        run: python -m PyInstaller --clean --noconfirm garmin_workout_generator.spec
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WORKOUT-Generator-Windows
+          path: dist/WORKOUTGenerator.exe
+          if-no-files-found: error
+
+      - name: Publish Windows executable in GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/WORKOUTGenerator.exe
+          generate_release_notes: true
+
+  build-macos:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            artifact: WORKOUT-Generator-macOS-Intel
+            archive: WORKOUT-Generator-macOS-Intel.zip
+          - runner: macos-15
+            artifact: WORKOUT-Generator-macOS-Apple-Silicon
+            archive: WORKOUT-Generator-macOS-Apple-Silicon.zip
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Checkout repository
@@ -23,28 +89,27 @@ jobs:
           python-version: "3.14"
           cache: "pip"
 
-      - name: Install application dependencies
-        run: python -m pip install -r requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-build.txt
 
-      - name: Install build dependencies
-        run: python -m pip install -r requirements-build.txt
+      - name: Build macOS app
+        run: python -m PyInstaller --clean --noconfirm workout_generator_macos.spec
 
-      - name: Run tests
-        run: python -m unittest discover -s tests -v
+      - name: Archive macOS app
+        run: ditto -c -k --sequesterRsrc --keepParent "dist/WORKOUT Generator.app" "${{ matrix.archive }}"
 
-      - name: Build Windows executable
-        run: python -m PyInstaller --clean --noconfirm garmin_workout_generator.spec
-
-      - name: Upload Windows artifact
+      - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: GarminWorkoutGenerator-Windows
-          path: dist/GarminWorkoutGenerator.exe
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.archive }}
           if-no-files-found: error
 
-      - name: Publish executable in GitHub Release
+      - name: Publish macOS archive in GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/GarminWorkoutGenerator.exe
+          files: ${{ matrix.archive }}
           generate_release_notes: true
