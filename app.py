@@ -527,6 +527,19 @@ def wol_creator_pair_status():
 
 @app.post("/wol-creator/disconnect")
 def wol_creator_disconnect():
+    token = get_wol_creator_token()
+    if token:
+        try:
+            requests.post(
+                f"{WOL_BASE_URL}/api/creator/revoke",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "User-Agent": "WORKOUTGenerator/0.1",
+                },
+                timeout=30,
+            )
+        except requests.RequestException:
+            pass
     clear_wol_creator_credentials()
     return {"ok": True}
 
