@@ -64,13 +64,17 @@ class WolPublishEndpointTests(unittest.TestCase):
     def test_missing_publisher_key_is_rejected_without_network_call(self):
         with patch.dict(os.environ, {}, clear=True), patch.object(
             app_module,
+            "get_wol_creator_token",
+            return_value=None,
+        ), patch.object(
+            app_module,
             "get_wol_publisher_key",
             return_value=None,
         ), patch.object(app_module.requests, "post") as post:
             response = self.client.post("/publish-to-wol", json=WEEK_PAYLOAD)
 
         self.assertEqual(response.status_code, 400)
-        self.assertIn("WOL_PUBLISHER_KEY", response.get_json()["error"])
+        self.assertIn("non è collegato", response.get_json()["error"])
         post.assert_not_called()
 
     def test_week_payload_is_serialized_and_sent_to_wol(self):
@@ -82,6 +86,10 @@ class WolPublishEndpointTests(unittest.TestCase):
         }
 
         with patch.object(
+            app_module,
+            "get_wol_creator_token",
+            return_value="creator-secret",
+        ), patch.object(
             app_module,
             "get_wol_publisher_key",
             return_value="publisher-secret",
@@ -103,7 +111,7 @@ class WolPublishEndpointTests(unittest.TestCase):
         kwargs = post.call_args.kwargs
         self.assertEqual(
             kwargs["headers"]["Authorization"],
-            "Bearer publisher-secret",
+            "Bearer creator-secret",
         )
         self.assertEqual(kwargs["json"]["title"], "Settimana Test")
         self.assertEqual(len(kwargs["json"]["items"]), 2)
@@ -135,8 +143,12 @@ class WolPublishEndpointTests(unittest.TestCase):
 
         with patch.object(
             app_module,
-            "get_wol_publisher_key",
+            "get_wol_creator_token",
             return_value="bad-secret",
+        ), patch.object(
+            app_module,
+            "get_wol_publisher_key",
+            return_value=None,
         ), patch.object(
             app_module.requests,
             "post",
