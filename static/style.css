@@ -708,3 +708,40 @@ select:focus {
         flex-direction: column;
     }
 }
+
+
+/* WORKOUT Link creator pairing */
+.creator-connect {
+    margin-top: 18px;
+    padding: 14px;
+    border: 1px solid #D7E2DF;
+    border-radius: 12px;
+    background: #F7FAF9;
+    display: grid;
+    gap: 12px;
+}
+
+.creator-connect > div:first-child {
+    display: grid;
+    gap: 4px;
+}
+
+.creator-connect strong {
+    color: #173C35;
+}
+
+.creator-connect span {
+    color: #61736F;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.creator-connect-actions {
+    display: grid;
+    gap: 8px;
+}
+
+.creator-connect-actions input,
+.creator-connect-actions button {
+    width: 100%;
+}
